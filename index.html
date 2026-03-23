@@ -207,19 +207,33 @@ function loadP(force){
     document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';
     return;
   }
-  // Use cache if available and not forced
-  if(!force&&cachedProducts!==null){
+  
+  // Show cached data INSTANTLY (from localStorage)
+  var localCache=localStorage.getItem('uq_products');
+  if(localCache){
+    try{
+      var cached=JSON.parse(localCache);
+      cachedProducts=cached;
+      renderP(cached);
+    }catch(e){}
+  }else if(!force&&cachedProducts!==null){
     renderP(cachedProducts);
     return;
+  }else{
+    document.getElementById('hb').innerHTML='';
+    document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';
   }
-  document.getElementById('hb').innerHTML='';
-  document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';
+  
+  // Fetch fresh data in background
   api({action:'products',cid:CID}).then(function(ps){
     cachedProducts=Array.isArray(ps)?ps:[];
+    localStorage.setItem('uq_products',JSON.stringify(cachedProducts));
     renderP(cachedProducts);
   }).catch(function(e){
-    cachedProducts=[];
-    renderP([]);
+    if(!cachedProducts||cachedProducts.length===0){
+      cachedProducts=[];
+      renderP([]);
+    }
   });
 }
 
@@ -245,9 +259,9 @@ function remP(id){
   document.getElementById('c-'+id).style.opacity='.3';
   api({action:'remove',cid:CID,pid:id}).then(function(){
     document.getElementById('c-'+id).style.display='none';
-    // Update cache
     if(cachedProducts){
       cachedProducts=cachedProducts.filter(function(p){return p.id!==id;});
+      localStorage.setItem('uq_products',JSON.stringify(cachedProducts));
     }
   });
 }
@@ -306,7 +320,8 @@ function addP(){
     b.disabled=false;b.textContent='Start watching';
     if(r.error){sst('ast',r.error,'se');return;}
     sst('ast','Now watching '+r.name,'so');
-    cachedProducts=null; // Clear cache to force reload
+    cachedProducts=null;
+localStorage.removeItem('uq_products');
     setTimeout(function(){closeAdd();loadP(true);},1200);
   }).catch(function(e){b.disabled=false;b.textContent='Start watching';sst('ast','Failed to add','se');});
 }
