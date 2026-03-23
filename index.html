@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>dropping — price alerts</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>💧</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FAEBD7;color:#333;max-width:600px;margin:0 auto;min-height:100vh;-webkit-tap-highlight-color:transparent}
+
+.hdr{background:#fff;border-bottom:1px solid #e0e0e0;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.hdr h1{font-size:18px;font-weight:700;letter-spacing:-0.3px}
+.hdr h1 span{color:#FF0000}
+.hdr-right{display:flex;align-items:center;gap:6px}
+.addbtn{width:32px;height:32px;border-radius:50%;background:#FF0000;color:#fff;border:none;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.addbtn:hover{opacity:0.85}
+.setbtn{padding:4px 8px;border-radius:8px;font-size:20px;border:none;cursor:pointer;background:transparent;color:#999}
+.setbtn:hover{color:#333}
+
+.content{padding:20px 16px 16px}
+
+.card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:10px;overflow:hidden}
+.ci{display:flex;padding:12px;gap:12px}
+.cimg{width:72px;height:72px;object-fit:contain;border-radius:8px;background:#f3f4f6;flex-shrink:0}
+.cn{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm{font-size:11px;color:#888;margin-top:2px}
+.cp{margin-top:4px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.pn{font-size:17px;font-weight:700}.pd{color:#16a34a}
+.po{font-size:12px;color:#999;text-decoration:line-through}
+.bg{font-size:10px;padding:2px 6px;border-radius:99px;font-weight:500}
+.bgr{background:#dcfce7;color:#16a34a}.bgy{background:#fef3c7;color:#d97706}
+.cb{padding:0 12px 10px;display:flex;justify-content:space-between;align-items:center}
+.cl{font-size:11px;color:#FF0000;text-decoration:none}
+.bs{background:none;border:1px solid #e5e7eb;color:#999;font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer}
+.bs:hover{color:#FF0000;border-color:#FF0000}
+
+.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:30;justify-content:center;align-items:flex-start}
+.overlay.on{display:flex}
+.modal{background:#fff;width:100%;max-width:600px;max-height:85vh;border-radius:0 0 16px 16px;padding:20px 16px 32px;overflow-y:auto;margin-top:0;animation:slideDown 0.25s ease-out}
+@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-hdr h2{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:4px 8px}
+.modal-close:hover{color:#333}
+
+.pg{display:none;padding:0}.pg.on{display:block}
+.sec{background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:16px;margin-bottom:12px}
+.sec h2{font-size:15px;margin-bottom:10px}
+
+label{font-size:13px;font-weight:500;display:block;margin:10px 0 4px}
+input[type=text],input[type=number],select{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:14px;-webkit-appearance:none}
+input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px rgba(255,0,0,0.1)}
+.btn{width:100%;padding:11px;border-radius:8px;font-size:14px;font-weight:600;border:none;cursor:pointer;margin-top:10px}
+.bblk{background:#111;color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:hover{opacity:0.92}
+
+.pc{display:flex;gap:12px;margin-bottom:12px}
+.pi{width:90px;height:90px;object-fit:contain;border-radius:8px;background:#f3f4f6}
+.ppn{font-weight:600;font-size:15px}.ppp{font-size:20px;font-weight:700;margin-top:4px}.pps{color:#FF0000;font-size:13px}
+.og{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ob{padding:6px 14px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:13px}
+.ob.on{border-color:#FF0000;background:#fff5f5}
+.ob img{width:28px;height:28px;border-radius:4px;display:block;margin:0 auto 2px}
+.ob:disabled{opacity:0.3;cursor:not-allowed;text-decoration:line-through}
+
+.st{text-align:center;padding:10px;font-size:13px;border-radius:8px;margin-top:10px}
+.se{background:#fef2f2;color:#e11d48}.so{background:#dcfce7;color:#16a34a}
+.hd{display:none}
+
+.empty{text-align:center;padding:60px 20px}
+.empty h2{font-size:17px;color:#666;margin-bottom:8px}
+.empty p{color:#999;font-size:13px;line-height:1.5}
+
+.banner{background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;cursor:pointer;color:#FF0000}
+.banner:hover{background:#fef2f2}
+
+.steps{background:#f5f5f5;border-radius:8px;padding:10px;font-size:12px;line-height:1.6;margin-bottom:10px}
+.steps b{color:#FF0000}
+.conn{background:#dcfce7;border-radius:8px;padding:10px;font-size:13px;color:#16a34a;margin-bottom:10px}
+.info{font-size:11px;color:#888;margin-top:4px}
+.backbtn{background:none;border:none;font-size:18px;color:#888;cursor:pointer;padding:4px 8px}
+.backbtn:hover{color:#333}
+
+.loading{text-align:center;padding:40px;color:#999}
+</style>
+</head>
+<body>
+
+<div class="hdr" id="mainHdr">
+  <h1><span>drop</span>ping</h1>
+  <div class="hdr-right">
+    <button class="addbtn" onclick="openAdd()">+</button>
+    <button class="setbtn" onclick="goSet()">&#9881;</button>
+  </div>
+</div>
+
+<div id="home" class="content">
+  <div id="hb"></div>
+  <div id="hc"><div class="loading">Loading...</div></div>
+</div>
+
+<div class="overlay" id="addModal" onclick="closeAddBg(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>Add product</h2>
+      <button class="modal-close" onclick="closeAdd()">&#10005;</button>
+    </div>
+    <label>Product URL</label>
+    <input type="text" id="aurl" placeholder="https://www.uniqlo.com/...">
+    <button class="btn bblk" id="pbtn" onclick="prev()">Look up product</button>
+    <div id="psec" class="hd" style="margin-top:16px">
+      <div class="pc">
+        <img id="pimg" class="pi" referrerpolicy="no-referrer">
+        <div>
+          <div id="pnm" class="ppn"></div>
+          <div id="ppr" class="ppp"></div>
+          <div id="psl" class="pps"></div>
+        </div>
+      </div>
+      <div id="csec" class="hd"><label>Color</label><div id="cols" class="og"></div></div>
+      <div style="margin-top:8px"><label>Size</label><div id="szs" class="og"></div></div>
+      <div style="margin-top:8px"><label>Target price (optional)</label><input type="number" id="tp" step="0.01" placeholder="Notify me below this price"></div>
+      <button class="btn bblk" id="abtn" onclick="addP()">Start watching</button>
+    </div>
+    <div id="ast" class="hd"></div>
+  </div>
+</div>
+
+<div id="set" class="pg">
+  <div class="hdr" style="position:relative">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="backbtn" onclick="goHome()">&#8592;</button>
+      <h1>Settings</h1>
+    </div>
+  </div>
+  <div style="padding:20px 16px">
+    <div class="sec">
+      <h2>Telegram notifications</h2>
+      <div id="cbanner" class="conn hd">Connected — Chat ID: <span id="scid"></span></div>
+      <div class="steps">
+        <b>1.</b> Message <b>@userinfobot</b> on Telegram<br>
+        <b>2.</b> It replies with your Chat ID number<br>
+        <b>3.</b> Paste it below and click Test
+      </div>
+      <label>Chat ID</label>
+      <input type="text" id="cid" placeholder="Your Chat ID number">
+      <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
+      <div id="tst" class="hd"></div>
+    </div>
+    <div class="sec">
+      <h2>Defaults</h2>
+      <label>Tops</label>
+      <select id="szt"><option value="002">XS</option><option value="003">S</option><option value="004" selected>M</option><option value="005">L</option><option value="006">XL</option><option value="007">XXL</option></select>
+      <label>Bottoms</label>
+      <select id="szb"><option value="028">28</option><option value="030">30</option><option value="032">32</option><option value="034">34</option><option value="003">S</option><option value="004" selected>M</option><option value="005">L</option><option value="006">XL</option></select>
+      <label>Region</label>
+      <select id="rg"><option value="es" selected>Spain</option><option value="de">Germany</option><option value="fr">France</option><option value="uk">UK</option><option value="us">US</option><option value="it">Italy</option><option value="jp">Japan</option></select>
+      <button class="btn bblk" onclick="saveSet()">Save</button>
+      <div id="sst" class="hd"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== CONFIG ======
+var API='YOUR_APPS_SCRIPT_URL_HERE';
+
+// ====== STATE ======
+var CID=localStorage.getItem('uq_cid')||'';
+var cProd=null,cParsed=null,selColor='',selSize='';
+var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL','001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','28':'28','29':'29','30':'30','31':'31','32':'32','33':'33','34':'34','36':'36'};
+function szName(c){return SZN[c]||c||'';}
+
+// ====== API HELPER ======
+function api(action,params){
+  var url=API+'?action='+action;
+  if(params){Object.keys(params).forEach(function(k){url+='&'+k+'='+encodeURIComponent(params[k]);});}
+  return fetch(url).then(function(r){return r.json();});
+}
+
+// ====== NAVIGATION ======
+function goSet(){document.getElementById('home').style.display='none';document.getElementById('mainHdr').style.display='none';document.getElementById('set').classList.add('on');}
+function goHome(){document.getElementById('set').classList.remove('on');document.getElementById('home').style.display='block';document.getElementById('mainHdr').style.display='flex';loadP();}
+function openAdd(){document.getElementById('addModal').classList.add('on');document.getElementById('aurl').value='';document.getElementById('psec').classList.add('hd');document.getElementById('ast').classList.add('hd');selColor='';selSize='';cProd=null;cParsed=null;}
+function closeAdd(){document.getElementById('addModal').classList.remove('on');}
+function closeAddBg(e){if(e.target===document.getElementById('addModal'))closeAdd();}
+
+// ====== HOME ======
+function loadP(){
+  if(!CID){
+    document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">Connect Telegram to receive price alerts. Tap here.</div>';
+    document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';
+    return;
+  }
+  document.getElementById('hb').innerHTML='';
+  document.getElementById('hc').innerHTML='<div class="loading">Loading...</div>';
+  api('products',{chatId:CID}).then(renderP).catch(function(e){document.getElementById('hc').innerHTML='Error loading products';});
+}
+
+function renderP(ps){
+  if(!ps||!Array.isArray(ps)||ps.length===0){document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';return;}
+  var h='';
+  for(var i=0;i<ps.length;i++){var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0,s=p.currency==='USD'?'$':'€';
+    h+='<div class="card" id="c-'+p.id+'"><div class="ci"><img class="cimg" src="'+(p.image_url||'')+'?width=200" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"><div style="flex:1;min-width:0"><div class="cn">'+(p.name||'?')+'</div><div class="cm">'+(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+szName(String(p.size_code)):'')+'</div><div class="cp"><span class="pn'+(d?' pd':'')+'">'+s+l.toFixed(2)+'</span>';
+    if(d)h+='<span class="po">'+s+n.toFixed(2)+'</span><span class="bg bgr">-'+pc+'%</span>';
+    h+='</div>';if(p.target_price)h+='<div style="margin-top:3px"><span class="bg bgy">Target: '+s+parseFloat(p.target_price).toFixed(2)+'</span></div>';
+    h+='<div class="cm">Lowest: '+s+w.toFixed(2)+'</div></div></div><div class="cb"><a class="cl" href="'+(p.product_url||'#')+'" target="_blank">View on Uniqlo</a><button class="bs" onclick="remP(\''+p.id+'\')">Remove</button></div></div>';
+  }
+  document.getElementById('hc').innerHTML=h;
+}
+
+function remP(id){
+  if(!confirm('Remove this product?'))return;
+  document.getElementById('c-'+id).style.opacity='.3';
+  api('remove',{productId:id,chatId:CID}).then(function(){document.getElementById('c-'+id).style.display='none';});
+}
+
+// ====== ADD PRODUCT ======
+function getAvailSizes(product,colorCode){
+  var avail={};
+  if(!product||!product.colors)return avail;
+  for(var c=0;c<product.colors.length;c++){
+    var col=product.colors[c];
+    if(!colorCode||col.code===colorCode){
+      for(var s=0;s<col.sizes.length;s++){
+        if(col.sizes[s].inStock)avail[col.sizes[s].sizeCode]=true;
+      }
+    }
+  }
+  return avail;
+}
+
+function prev(){
+  var url=document.getElementById('aurl').value.trim();if(!url)return;
+  var b=document.getElementById('pbtn');b.disabled=true;b.textContent='Loading...';
+  document.getElementById('ast').classList.add('hd');
+  api('preview',{url:url}).then(function(r){
+    b.disabled=false;b.textContent='Look up product';
+    if(r.error){sst('ast',r.error,'se');return;}
+    cProd=r.product;cParsed=r.parsed;selColor=r.parsed.colorCode||'';selSize='';
+    document.getElementById('pimg').src=(r.product.mainImage||'')+'?width=200';
+    document.getElementById('pnm').textContent=r.product.name;
+    document.getElementById('ppr').textContent=r.product.currencySymbol+r.product.currentPrice.toFixed(2);
+    document.getElementById('psl').textContent=r.product.onSale?'Sale — was '+r.product.currencySymbol+r.product.originalPrice.toFixed(2):'';
+    if(r.product.colors.length>1){var ch='';for(var i=0;i<r.product.colors.length;i++){var c=r.product.colors[i];ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+c.code+'\',this)">'+(c.name||c.code)+'</button>';}document.getElementById('cols').innerHTML=ch;document.getElementById('csec').classList.remove('hd');}
+    else{document.getElementById('csec').classList.add('hd');if(r.product.colors.length===1)selColor=r.product.colors[0].code;}
+    renderSizes();
+    document.getElementById('psec').classList.remove('hd');
+  }).catch(function(e){b.disabled=false;b.textContent='Look up product';sst('ast','Connection error','se');});
+}
+
+function renderSizes(){
+  var sh='';var avail=getAvailSizes(cProd,selColor);
+  for(var i=0;i<cProd.sizes.length;i++){var sz=cProd.sizes[i];var ok=avail[sz.code];
+    if(!ok)sh+='<button class="ob" disabled>'+sz.name+'</button>';
+    else sh+='<button class="ob" onclick="pckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
+  }
+  document.getElementById('szs').innerHTML=sh;
+}
+
+function pckC(c,el){
+  selColor=c;selSize='';
+  var bs=document.querySelectorAll('#cols .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
+  if(cProd){
+    for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===c&&cProd.colors[i].image){document.getElementById('pimg').src=cProd.colors[i].image+'?width=200';break;}
+    renderSizes();
+  }
+}
+function pckS(c,el){selSize=c;var bs=document.querySelectorAll('#szs .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');}
+function getSelColorName(){if(!cProd||!selColor)return selColor;for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===selColor)return cProd.colors[i].name||selColor;return selColor;}
+
+function addP(){
+  if(!CID){sst('ast','Connect Telegram first in Settings','se');return;}
+  if(!selSize){sst('ast','Pick a size','se');return;}
+  var b=document.getElementById('abtn');b.disabled=true;b.textContent='Adding...';
+  var data=JSON.stringify({url:document.getElementById('aurl').value,productCode:cParsed.productCode,colorCode:selColor,colorName:getSelColorName(),sizeCode:selSize,targetPrice:document.getElementById('tp').value||'',region:cParsed.region,chatId:CID});
+  api('add',{data:data}).then(function(r){
+    b.disabled=false;b.textContent='Start watching';
+    if(r.error){sst('ast',r.error,'se');return;}
+    sst('ast','Now watching '+r.name,'so');
+    setTimeout(function(){closeAdd();loadP();},1200);
+  }).catch(function(e){b.disabled=false;b.textContent='Start watching';sst('ast','Connection error','se');});
+}
+
+// ====== SETTINGS ======
+function testTg(){
+  var c=document.getElementById('cid').value.trim();if(!c){sst('tst','Enter your Chat ID','se');return;}
+  var b=document.getElementById('tbtn');b.disabled=true;b.textContent='Sending...';
+  api('testTelegram',{chatId:c}).then(function(r){
+    b.disabled=false;b.textContent='Test connection';
+    if(r&&r.ok){localStorage.setItem('uq_cid',c);CID=c;document.getElementById('scid').textContent=c;document.getElementById('cbanner').classList.remove('hd');sst('tst','Connected! Check Telegram.','so');}
+    else sst('tst',(r?r.error:'Failed'),'se');
+  }).catch(function(e){b.disabled=false;b.textContent='Test connection';sst('tst','Connection error','se');});
+}
+
+function saveSet(){
+  if(!CID){sst('sst','Connect Telegram first','se');return;}
+  var data=JSON.stringify({sizeTops:document.getElementById('szt').value,sizeBottoms:document.getElementById('szb').value,region:document.getElementById('rg').value});
+  api('save',{chatId:CID,data:data}).then(function(r){sst('sst',r.error?r.error:'Saved!',r.error?'se':'so');});
+}
+
+function sst(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
+
+// ====== INIT ======
+if(CID){
+  document.getElementById('cid').value=CID;
+  document.getElementById('scid').textContent=CID;
+  document.getElementById('cbanner').classList.remove('hd');
+  api('settings',{chatId:CID}).then(function(u){if(u){setSel('szt',u.size_tops);setSel('szb',u.size_bottoms);setSel('rg',u.region);}});
+  loadP();
+}else{
+  document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">Connect Telegram to receive price alerts. Tap here.</div>';
+  document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';
+}
+function setSel(id,v){if(!v)return;var e=document.getElementById(id);for(var i=0;i<e.options.length;i++)if(e.options[i].value===String(v)){e.selectedIndex=i;break;}}
+</script>
+</body>
+</html>
