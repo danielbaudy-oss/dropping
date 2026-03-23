@@ -359,7 +359,7 @@ function closeEdit(){document.getElementById('editModal').classList.remove('on')
 function closeEditBg(e){if(e.target===document.getElementById('editModal'))closeEdit();}
 
 function epckC(c,el){
-  editColor=c;editSize='';
+  editColor=c;
   var bs=document.querySelectorAll('#ecols .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
   if(editProd){for(var i=0;i<editProd.colors.length;i++)if(editProd.colors[i].code===c&&editProd.colors[i].image){document.getElementById('eimg').src=editProd.colors[i].image+'?width=200';break;}}
   eRefreshSizes();
@@ -376,7 +376,7 @@ function eRefreshSizes(){
   for(var i=0;i<editProd.sizes.length;i++){
     var sz=editProd.sizes[i];var ok=avail[sz.code];
     var isSelected=sz.code===editSize;
-    if(!ok)sh+='<button class="ob" disabled>'+sz.name+'</button>';
+    if(!ok){if(isSelected)editSize='';sh+='<button class="ob" disabled>'+sz.name+'</button>';}
     else sh+='<button class="ob'+(isSelected?' on':'')+'" onclick="epckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
   }
   document.getElementById('eszs').innerHTML=sh;
@@ -464,8 +464,9 @@ function refreshSizes(){
   if(!cProd)return;
   var sh='',avail=getAvailSizes(cProd,selColor);
   for(var i=0;i<cProd.sizes.length;i++){var sz=cProd.sizes[i];var ok=avail[sz.code];
-    if(!ok)sh+='<button class="ob" disabled>'+sz.name+'</button>';
-    else sh+='<button class="ob" onclick="pckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
+    var isSel=sz.code===selSize;
+    if(!ok){if(isSel)selSize='';sh+='<button class="ob" disabled>'+sz.name+'</button>';}
+    else sh+='<button class="ob'+(isSel?' on':'')+'" onclick="pckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
   }
   document.getElementById('szs').innerHTML=sh;
 }
@@ -478,7 +479,7 @@ function getAvailSizes(product,colorCode){
 }
 
 function pckC(c,el){
-  selColor=c;selSize='';
+  selColor=c;
   var bs=document.querySelectorAll('#cols .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
   if(cProd){for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===c&&cProd.colors[i].image){document.getElementById('pimg').src=cProd.colors[i].image+'?width=200';break;}}
   refreshSizes();
