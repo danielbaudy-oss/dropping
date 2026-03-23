@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
 <title>dropping — price alerts</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>💧</text></svg>">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FAEBD7;color:#333;max-width:600px;margin:0 auto;min-height:100vh;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FAEBD7;color:#333;max-width:600px;margin:0 auto;min-height:100vh}
 
 .hdr{background:#fff;border-bottom:1px solid #e0e0e0;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
 .hdr h1{font-size:18px;font-weight:700;letter-spacing:-0.3px}
@@ -53,10 +51,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 label{font-size:13px;font-weight:500;display:block;margin:10px 0 4px}
 input[type=text],input[type=number],select{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:14px;-webkit-appearance:none}
 input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px rgba(255,0,0,0.1)}
-.btn{width:100%;padding:11px;border-radius:8px;font-size:14px;font-weight:600;border:none;cursor:pointer;margin-top:10px}
+.btn{width:100%;padding:11px;border-radius:8px;font-size:14px;font-weight:600;border:none;cursor:pointer;margin-top:10px;transition:all 0.15s}
 .bblk{background:#111;color:#fff}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn:hover{opacity:0.92}
+.btn-saved{background:#16a34a !important;color:#fff !important}
 
 .pc{display:flex;gap:12px;margin-bottom:12px}
 .pi{width:90px;height:90px;object-fit:contain;border-radius:8px;background:#f3f4f6}
@@ -64,7 +63,6 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 .og{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .ob{padding:6px 14px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:13px}
 .ob.on{border-color:#FF0000;background:#fff5f5}
-.ob img{width:28px;height:28px;border-radius:4px;display:block;margin:0 auto 2px}
 .ob:disabled{opacity:0.3;cursor:not-allowed;text-decoration:line-through}
 
 .st{text-align:center;padding:10px;font-size:13px;border-radius:8px;margin-top:10px}
@@ -81,11 +79,12 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 .steps{background:#f5f5f5;border-radius:8px;padding:10px;font-size:12px;line-height:1.6;margin-bottom:10px}
 .steps b{color:#FF0000}
 .conn{background:#dcfce7;border-radius:8px;padding:10px;font-size:13px;color:#16a34a;margin-bottom:10px}
-.info{font-size:11px;color:#888;margin-top:4px}
+
 .backbtn{background:none;border:none;font-size:18px;color:#888;cursor:pointer;padding:4px 8px}
 .backbtn:hover{color:#333}
 
-.loading{text-align:center;padding:40px;color:#999}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid #ddd;border-top-color:#333;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -100,7 +99,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 
 <div id="home" class="content">
   <div id="hb"></div>
-  <div id="hc"><div class="loading">Loading...</div></div>
+  <div id="hc"></div>
 </div>
 
 <div class="overlay" id="addModal" onclick="closeAddBg(event)">
@@ -154,12 +153,12 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
     <div class="sec">
       <h2>Defaults</h2>
       <label>Tops</label>
-      <select id="szt"><option value="002">XS</option><option value="003">S</option><option value="004" selected>M</option><option value="005">L</option><option value="006">XL</option><option value="007">XXL</option></select>
+      <select id="sts"><option value="002">XS</option><option value="003">S</option><option value="004" selected>M</option><option value="005">L</option><option value="006">XL</option><option value="007">XXL</option></select>
       <label>Bottoms</label>
-      <select id="szb"><option value="028">28</option><option value="030">30</option><option value="032">32</option><option value="034">34</option><option value="003">S</option><option value="004" selected>M</option><option value="005">L</option><option value="006">XL</option></select>
+      <select id="sb"><option value="028">28</option><option value="030">30</option><option value="032">32</option><option value="034">34</option><option value="003">S</option><option value="004" selected>M</option><option value="005">L</option><option value="006">XL</option></select>
       <label>Region</label>
       <select id="rg"><option value="es" selected>Spain</option><option value="de">Germany</option><option value="fr">France</option><option value="uk">UK</option><option value="us">US</option><option value="it">Italy</option><option value="jp">Japan</option></select>
-      <button class="btn bblk" onclick="saveSet()">Save</button>
+      <button class="btn bblk" id="savbtn" onclick="saveSet()">Save</button>
       <div id="sst" class="hd"></div>
     </div>
   </div>
@@ -167,42 +166,69 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 
 <script>
 // ====== CONFIG ======
-var API='https://script.google.com/macros/s/AKfycbw3nuffwCpweqzNqecFILoDcs5_G-shOHWaJIj0qIuSQ6lOc7LLvqfhWBe_WhJajjBDcg/exec';
-
-// ====== STATE ======
+var API='https://script.google.com/macros/s/AKfycbwqkapNjynsZoM-5iVPexAsE3mLDa42zD22pjRt-KfCIquoxq-FxGOavrurFs2wLQKT-A/exec';
 var CID=localStorage.getItem('uq_cid')||'';
 var cProd=null,cParsed=null,selColor='',selSize='';
+var cachedProducts=null;
+var settingsLoaded=false;
+
 var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL','001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','28':'28','29':'29','30':'30','31':'31','32':'32','33':'33','34':'34','36':'36'};
 function szName(c){return SZN[c]||c||'';}
 
 // ====== API HELPER ======
-function api(action,params){
-  var url=API+'?action='+action;
-  if(params){Object.keys(params).forEach(function(k){url+='&'+k+'='+encodeURIComponent(params[k]);});}
+function api(params){
+  var url=API+'?'+Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
   return fetch(url).then(function(r){return r.json();});
 }
 
 // ====== NAVIGATION ======
-function goSet(){document.getElementById('home').style.display='none';document.getElementById('mainHdr').style.display='none';document.getElementById('set').classList.add('on');}
-function goHome(){document.getElementById('set').classList.remove('on');document.getElementById('home').style.display='block';document.getElementById('mainHdr').style.display='flex';loadP();}
+function goSet(){
+  document.getElementById('home').style.display='none';
+  document.getElementById('mainHdr').style.display='none';
+  document.getElementById('set').classList.add('on');
+}
+function goHome(){
+  document.getElementById('set').classList.remove('on');
+  document.getElementById('home').style.display='block';
+  document.getElementById('mainHdr').style.display='flex';
+  // Use cached data — no reload
+  if(cachedProducts!==null){
+    renderP(cachedProducts);
+  }
+}
 function openAdd(){document.getElementById('addModal').classList.add('on');document.getElementById('aurl').value='';document.getElementById('psec').classList.add('hd');document.getElementById('ast').classList.add('hd');selColor='';selSize='';cProd=null;cParsed=null;}
 function closeAdd(){document.getElementById('addModal').classList.remove('on');}
 function closeAddBg(e){if(e.target===document.getElementById('addModal'))closeAdd();}
 
-// ====== HOME ======
-function loadP(){
+// ====== LOAD PRODUCTS ======
+function loadP(force){
   if(!CID){
     document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">Connect Telegram to receive price alerts. Tap here.</div>';
     document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';
     return;
   }
+  // Use cache if available and not forced
+  if(!force&&cachedProducts!==null){
+    renderP(cachedProducts);
+    return;
+  }
   document.getElementById('hb').innerHTML='';
-  document.getElementById('hc').innerHTML='<div class="loading">Loading...</div>';
-  api('products',{chatId:CID}).then(renderP).catch(function(e){document.getElementById('hc').innerHTML='Error loading products';});
+  document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';
+  api({action:'products',cid:CID}).then(function(ps){
+    cachedProducts=Array.isArray(ps)?ps:[];
+    renderP(cachedProducts);
+  }).catch(function(e){
+    cachedProducts=[];
+    renderP([]);
+  });
 }
 
 function renderP(ps){
-  if(!ps||!Array.isArray(ps)||ps.length===0){document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';return;}
+  if(!ps||!Array.isArray(ps)||ps.length===0){
+    document.getElementById('hb').innerHTML='';
+    document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';
+    return;
+  }
   var h='';
   for(var i=0;i<ps.length;i++){var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0,s=p.currency==='USD'?'$':'€';
     h+='<div class="card" id="c-'+p.id+'"><div class="ci"><img class="cimg" src="'+(p.image_url||'')+'?width=200" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"><div style="flex:1;min-width:0"><div class="cn">'+(p.name||'?')+'</div><div class="cm">'+(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+szName(String(p.size_code)):'')+'</div><div class="cp"><span class="pn'+(d?' pd':'')+'">'+s+l.toFixed(2)+'</span>';
@@ -210,35 +236,28 @@ function renderP(ps){
     h+='</div>';if(p.target_price)h+='<div style="margin-top:3px"><span class="bg bgy">Target: '+s+parseFloat(p.target_price).toFixed(2)+'</span></div>';
     h+='<div class="cm">Lowest: '+s+w.toFixed(2)+'</div></div></div><div class="cb"><a class="cl" href="'+(p.product_url||'#')+'" target="_blank">View on Uniqlo</a><button class="bs" onclick="remP(\''+p.id+'\')">Remove</button></div></div>';
   }
+  document.getElementById('hb').innerHTML='';
   document.getElementById('hc').innerHTML=h;
 }
 
 function remP(id){
   if(!confirm('Remove this product?'))return;
   document.getElementById('c-'+id).style.opacity='.3';
-  api('remove',{productId:id,chatId:CID}).then(function(){document.getElementById('c-'+id).style.display='none';});
+  api({action:'remove',cid:CID,pid:id}).then(function(){
+    document.getElementById('c-'+id).style.display='none';
+    // Update cache
+    if(cachedProducts){
+      cachedProducts=cachedProducts.filter(function(p){return p.id!==id;});
+    }
+  });
 }
 
 // ====== ADD PRODUCT ======
-function getAvailSizes(product,colorCode){
-  var avail={};
-  if(!product||!product.colors)return avail;
-  for(var c=0;c<product.colors.length;c++){
-    var col=product.colors[c];
-    if(!colorCode||col.code===colorCode){
-      for(var s=0;s<col.sizes.length;s++){
-        if(col.sizes[s].inStock)avail[col.sizes[s].sizeCode]=true;
-      }
-    }
-  }
-  return avail;
-}
-
 function prev(){
   var url=document.getElementById('aurl').value.trim();if(!url)return;
   var b=document.getElementById('pbtn');b.disabled=true;b.textContent='Loading...';
   document.getElementById('ast').classList.add('hd');
-  api('preview',{url:url}).then(function(r){
+  api({action:'preview',url:url}).then(function(r){
     b.disabled=false;b.textContent='Look up product';
     if(r.error){sst('ast',r.error,'se');return;}
     cProd=r.product;cParsed=r.parsed;selColor=r.parsed.colorCode||'';selSize='';
@@ -248,13 +267,14 @@ function prev(){
     document.getElementById('psl').textContent=r.product.onSale?'Sale — was '+r.product.currencySymbol+r.product.originalPrice.toFixed(2):'';
     if(r.product.colors.length>1){var ch='';for(var i=0;i<r.product.colors.length;i++){var c=r.product.colors[i];ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+c.code+'\',this)">'+(c.name||c.code)+'</button>';}document.getElementById('cols').innerHTML=ch;document.getElementById('csec').classList.remove('hd');}
     else{document.getElementById('csec').classList.add('hd');if(r.product.colors.length===1)selColor=r.product.colors[0].code;}
-    renderSizes();
+    refreshSizes();
     document.getElementById('psec').classList.remove('hd');
-  }).catch(function(e){b.disabled=false;b.textContent='Look up product';sst('ast','Connection error','se');});
+  }).catch(function(e){b.disabled=false;b.textContent='Look up product';sst('ast','Failed to load product','se');});
 }
 
-function renderSizes(){
-  var sh='';var avail=getAvailSizes(cProd,selColor);
+function refreshSizes(){
+  if(!cProd)return;
+  var sh='',avail=getAvailSizes(cProd,selColor);
   for(var i=0;i<cProd.sizes.length;i++){var sz=cProd.sizes[i];var ok=avail[sz.code];
     if(!ok)sh+='<button class="ob" disabled>'+sz.name+'</button>';
     else sh+='<button class="ob" onclick="pckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
@@ -262,61 +282,101 @@ function renderSizes(){
   document.getElementById('szs').innerHTML=sh;
 }
 
+function getAvailSizes(product,colorCode){
+  var avail={};if(!product||!product.colors)return avail;
+  for(var c=0;c<product.colors.length;c++){var col=product.colors[c];
+    if(!colorCode||col.code===colorCode){for(var s=0;s<col.sizes.length;s++){if(col.sizes[s].inStock)avail[col.sizes[s].sizeCode]=true;}}
+  }return avail;
+}
+
 function pckC(c,el){
   selColor=c;selSize='';
   var bs=document.querySelectorAll('#cols .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
-  if(cProd){
-    for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===c&&cProd.colors[i].image){document.getElementById('pimg').src=cProd.colors[i].image+'?width=200';break;}
-    renderSizes();
-  }
+  if(cProd){for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===c&&cProd.colors[i].image){document.getElementById('pimg').src=cProd.colors[i].image+'?width=200';break;}}
+  refreshSizes();
 }
 function pckS(c,el){selSize=c;var bs=document.querySelectorAll('#szs .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');}
 function getSelColorName(){if(!cProd||!selColor)return selColor;for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===selColor)return cProd.colors[i].name||selColor;return selColor;}
 
 function addP(){
-  if(!CID){sst('ast','Connect Telegram first in Settings','se');return;}
+  if(!CID){sst('ast','Connect Telegram first','se');return;}
   if(!selSize){sst('ast','Pick a size','se');return;}
   var b=document.getElementById('abtn');b.disabled=true;b.textContent='Adding...';
-  var data=JSON.stringify({url:document.getElementById('aurl').value,productCode:cParsed.productCode,colorCode:selColor,colorName:getSelColorName(),sizeCode:selSize,targetPrice:document.getElementById('tp').value||'',region:cParsed.region,chatId:CID});
-  api('add',{data:data}).then(function(r){
+  api({action:'add',cid:CID,pc:cParsed.productCode,cc:selColor,cn:getSelColorName(),sc:selSize,tp:document.getElementById('tp').value||'',rg:cParsed.region}).then(function(r){
     b.disabled=false;b.textContent='Start watching';
     if(r.error){sst('ast',r.error,'se');return;}
     sst('ast','Now watching '+r.name,'so');
-    setTimeout(function(){closeAdd();loadP();},1200);
-  }).catch(function(e){b.disabled=false;b.textContent='Start watching';sst('ast','Connection error','se');});
+    cachedProducts=null; // Clear cache to force reload
+    setTimeout(function(){closeAdd();loadP(true);},1200);
+  }).catch(function(e){b.disabled=false;b.textContent='Start watching';sst('ast','Failed to add','se');});
 }
 
 // ====== SETTINGS ======
 function testTg(){
   var c=document.getElementById('cid').value.trim();if(!c){sst('tst','Enter your Chat ID','se');return;}
   var b=document.getElementById('tbtn');b.disabled=true;b.textContent='Sending...';
-  api('testTelegram',{chatId:c}).then(function(r){
+  api({action:'test',cid:c}).then(function(r){
     b.disabled=false;b.textContent='Test connection';
-    if(r&&r.ok){localStorage.setItem('uq_cid',c);CID=c;document.getElementById('scid').textContent=c;document.getElementById('cbanner').classList.remove('hd');sst('tst','Connected! Check Telegram.','so');}
+    if(r&&r.ok){
+      localStorage.setItem('uq_cid',c);CID=c;
+      document.getElementById('scid').textContent=c;
+      document.getElementById('cbanner').classList.remove('hd');
+      sst('tst','Connected! Check Telegram.','so');
+      cachedProducts=null; // Force reload on home
+    }
     else sst('tst',(r?r.error:'Failed'),'se');
-  }).catch(function(e){b.disabled=false;b.textContent='Test connection';sst('tst','Connection error','se');});
+  }).catch(function(e){b.disabled=false;b.textContent='Test connection';sst('tst','Connection failed','se');});
 }
 
 function saveSet(){
   if(!CID){sst('sst','Connect Telegram first','se');return;}
-  var data=JSON.stringify({sizeTops:document.getElementById('szt').value,sizeBottoms:document.getElementById('szb').value,region:document.getElementById('rg').value});
-  api('save',{chatId:CID,data:data}).then(function(r){sst('sst',r.error?r.error:'Saved!',r.error?'se':'so');});
+  var b=document.getElementById('savbtn');
+  b.disabled=true;b.textContent='Saving...';
+  api({action:'save',cid:CID,st:document.getElementById('sts').value,sb:document.getElementById('sb').value,rg:document.getElementById('rg').value}).then(function(r){
+    if(r.error){
+      b.disabled=false;b.textContent='Save';
+      sst('sst',r.error,'se');
+    }else{
+      b.textContent='Saved';
+      b.classList.add('btn-saved');
+      sst('sst','Settings saved','so');
+      setTimeout(function(){
+        b.disabled=false;
+        b.textContent='Save';
+        b.classList.remove('btn-saved');
+      },2000);
+    }
+  }).catch(function(){
+    b.disabled=false;b.textContent='Save';
+    sst('sst','Failed to save','se');
+  });
 }
 
 function sst(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
+
+// ====== LOAD SETTINGS ======
+function loadSettings(){
+  if(!CID||settingsLoaded)return;
+  settingsLoaded=true;
+  api({action:'settings',cid:CID}).then(function(u){
+    if(u){setSel('sts',u.size_tops);setSel('sb',u.size_bottoms);setSel('rg',u.region);}
+  }).catch(function(){});
+}
+
+function setSel(id,v){if(!v)return;var e=document.getElementById(id);for(var i=0;i<e.options.length;i++)if(e.options[i].value===String(v)){e.selectedIndex=i;break;}}
 
 // ====== INIT ======
 if(CID){
   document.getElementById('cid').value=CID;
   document.getElementById('scid').textContent=CID;
   document.getElementById('cbanner').classList.remove('hd');
-  api('settings',{chatId:CID}).then(function(u){if(u){setSel('szt',u.size_tops);setSel('szb',u.size_bottoms);setSel('rg',u.region);}});
-  loadP();
+  // Load both in parallel
+  loadP(true);
+  loadSettings();
 }else{
   document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">Connect Telegram to receive price alerts. Tap here.</div>';
   document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';
 }
-function setSel(id,v){if(!v)return;var e=document.getElementById(id);for(var i=0;i<e.options.length;i++)if(e.options[i].value===String(v)){e.selectedIndex=i;break;}}
 </script>
 </body>
 </html>
