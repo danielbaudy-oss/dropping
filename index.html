@@ -20,7 +20,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 .content{padding:20px 16px 16px}
 
-.card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:10px;overflow:hidden}
+.card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:10px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s}
+.card:active{box-shadow:0 0 0 2px rgba(255,0,0,0.2)}
 .ci{display:flex;padding:12px;gap:12px}
 .cimg{width:72px;height:72px;object-fit:contain;border-radius:8px;background:#f3f4f6;flex-shrink:0}
 .cn{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -80,6 +81,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 
 .steps{background:#f5f5f5;border-radius:8px;padding:10px;font-size:12px;line-height:1.6;margin-bottom:10px}
 .steps b{color:#FF0000}
+.steps a{color:#FF0000;font-weight:600}
 .conn{background:#dcfce7;border-radius:8px;padding:10px;font-size:13px;color:#16a34a;margin-bottom:10px}
 
 .backbtn{background:none;border:none;font-size:18px;color:#888;cursor:pointer;padding:4px 8px}
@@ -104,6 +106,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
   <div id="hc"></div>
 </div>
 
+<!-- ADD MODAL -->
 <div class="overlay" id="addModal" onclick="closeAddBg(event)">
   <div class="modal">
     <div class="modal-hdr">
@@ -131,6 +134,34 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
   </div>
 </div>
 
+<!-- EDIT MODAL -->
+<div class="overlay" id="editModal" onclick="closeEditBg(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>Edit product</h2>
+      <button class="modal-close" onclick="closeEdit()">&#10005;</button>
+    </div>
+    <div id="editLoading" style="text-align:center;padding:30px"><div class="loader"></div></div>
+    <div id="editContent" class="hd">
+      <div class="pc">
+        <img id="eimg" class="pi" referrerpolicy="no-referrer">
+        <div>
+          <div id="enm" class="ppn"></div>
+          <div id="epr" class="ppp"></div>
+          <div id="esl" class="pps"></div>
+        </div>
+      </div>
+      <div id="ecsec" class="hd"><label>Color</label><div id="ecols" class="og"></div></div>
+      <div style="margin-top:8px"><label>Size</label><div id="eszs" class="og"></div></div>
+      <div style="margin-top:8px"><label>Target price (optional)</label><input type="number" id="etp" step="0.01" placeholder="Notify me below this price"></div>
+      <button class="btn bblk" id="ebtn" onclick="saveEdit()">Save changes</button>
+      <button class="btn" style="background:#fff;color:#FF0000;border:1px solid #fecaca;margin-top:8px" onclick="closeEdit();remP(editingProduct.id)">Remove product</button>
+    </div>
+    <div id="est" class="hd"></div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
 <div class="overlay" id="confirmModal" onclick="closeConfirmBg(event)">
   <div class="modal" style="padding:24px 20px">
     <p id="confirmMsg" style="font-size:15px;text-align:center;margin-bottom:16px"></p>
@@ -141,6 +172,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
   </div>
 </div>
 
+<!-- SETTINGS -->
 <div id="set" class="pg">
   <div class="hdr" style="position:relative">
     <div style="display:flex;align-items:center;gap:8px">
@@ -152,11 +184,11 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
     <div class="sec">
       <h2>Telegram notifications</h2>
       <div id="cbanner" class="conn hd">Connected — Chat ID: <span id="scid"></span></div>
-<div class="steps">
-  <b>1.</b> Open <a href="https://t.me/dropping_alerts_bot" target="_blank" style="color:#FF0000;font-weight:600">@dropping_alerts_bot</a> and send any message<br>
-  <b>2.</b> Then open <a href="https://t.me/userinfobot" target="_blank" style="color:#FF0000;font-weight:600">@userinfobot</a> and send any message — it replies with your Chat ID<br>
-  <b>3.</b> Paste the ID number below and click Test
-</div>
+      <div class="steps">
+        <b>1.</b> Open <a href="https://t.me/dropping_alerts_bot" target="_blank">@dropping_alerts_bot</a> and send any message<br>
+        <b>2.</b> Then open <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> and send any message — it replies with your Chat ID<br>
+        <b>3.</b> Paste the ID number below and click Test
+      </div>
       <label>Chat ID</label>
       <input type="text" id="cid" placeholder="Your Chat ID number">
       <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
@@ -184,6 +216,12 @@ var cachedProducts=null;
 var settingsLoaded=false;
 var pendingRemoveId=null;
 
+// Edit state
+var editingProduct=null;
+var editProd=null;
+var editColor='';
+var editSize='';
+
 var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL','001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','28':'28','29':'29','30':'30','31':'31','32':'32','33':'33','34':'34','36':'36'};
 function szName(c){return SZN[c]||c||'';}
 
@@ -192,12 +230,14 @@ function api(params){
   return fetch(url).then(function(r){return r.json();});
 }
 
+/* ====== NAVIGATION ====== */
 function goSet(){document.getElementById('home').style.display='none';document.getElementById('mainHdr').style.display='none';document.getElementById('set').classList.add('on');}
 function goHome(){document.getElementById('set').classList.remove('on');document.getElementById('home').style.display='block';document.getElementById('mainHdr').style.display='flex';if(cachedProducts!==null)renderP(cachedProducts);}
 function openAdd(){document.getElementById('addModal').classList.add('on');document.getElementById('aurl').value='';document.getElementById('psec').classList.add('hd');document.getElementById('ast').classList.add('hd');selColor='';selSize='';cProd=null;cParsed=null;}
 function closeAdd(){document.getElementById('addModal').classList.remove('on');}
 function closeAddBg(e){if(e.target===document.getElementById('addModal'))closeAdd();}
 
+/* ====== LOAD PRODUCTS ====== */
 function loadP(force){
   if(!CID){
     document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">Connect Telegram to receive price alerts. Tap here.</div>';
@@ -230,15 +270,16 @@ function renderP(ps){
   }
   var h='';
   for(var i=0;i<ps.length;i++){var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0,s=p.currency==='USD'?'$':'€';
-    h+='<div class="card" id="c-'+p.id+'"><div class="ci"><img class="cimg" src="'+(p.image_url||'')+'?width=200" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"><div style="flex:1;min-width:0"><div class="cn">'+(p.name||'?')+'</div><div class="cm">'+(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+szName(String(p.size_code)):'')+'</div><div class="cp"><span class="pn'+(d?' pd':'')+'">'+s+l.toFixed(2)+'</span>';
+    h+='<div class="card" id="c-'+p.id+'" onclick="openEdit(\''+p.id+'\')"><div class="ci"><img class="cimg" src="'+(p.image_url||'')+'?width=200" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"><div style="flex:1;min-width:0"><div class="cn">'+(p.name||'?')+'</div><div class="cm">'+(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+szName(String(p.size_code)):'')+'</div><div class="cp"><span class="pn'+(d?' pd':'')+'">'+s+l.toFixed(2)+'</span>';
     if(d)h+='<span class="po">'+s+n.toFixed(2)+'</span><span class="bg bgr">-'+pc+'%</span>';
     h+='</div>';if(p.target_price)h+='<div style="margin-top:3px"><span class="bg bgy">Target: '+s+parseFloat(p.target_price).toFixed(2)+'</span></div>';
-    h+='<div class="cm">Lowest: '+s+w.toFixed(2)+'</div></div></div><div class="cb"><a class="cl" href="'+(p.product_url||'#')+'" target="_blank">View on Uniqlo</a><button class="bs" onclick="remP(\''+p.id+'\')">Remove</button></div></div>';
+    h+='<div class="cm">Lowest: '+s+w.toFixed(2)+'</div></div></div><div class="cb"><a class="cl" href="'+(p.product_url||'#')+'" target="_blank" onclick="event.stopPropagation()">View on Uniqlo</a><button class="bs" onclick="event.stopPropagation();remP(\''+p.id+'\')">Remove</button></div></div>';
   }
   document.getElementById('hb').innerHTML='';
   document.getElementById('hc').innerHTML=h;
 }
 
+/* ====== REMOVE ====== */
 function remP(id){
   pendingRemoveId=id;
   var card=document.getElementById('c-'+id);
@@ -259,6 +300,147 @@ function confirmYes(){
 function confirmNo(){pendingRemoveId=null;document.getElementById('confirmModal').classList.remove('on');}
 function closeConfirmBg(e){if(e.target===document.getElementById('confirmModal'))confirmNo();}
 
+/* ====== EDIT PRODUCT ====== */
+function openEdit(id){
+  if(!cachedProducts)return;
+  editingProduct=null;
+  for(var i=0;i<cachedProducts.length;i++){if(cachedProducts[i].id===id){editingProduct=cachedProducts[i];break;}}
+  if(!editingProduct)return;
+
+  editProd=null;editColor=editingProduct.color_code||'';editSize=String(editingProduct.size_code||'');
+  document.getElementById('editContent').classList.add('hd');
+  document.getElementById('editLoading').style.display='block';
+  document.getElementById('est').classList.add('hd');
+  document.getElementById('editModal').classList.add('on');
+
+  // Fetch fresh product data for colors/sizes
+  api({action:'preview',url:editingProduct.product_url||('https://www.uniqlo.com/'+(editingProduct.region||'es')+'/en/products/'+editingProduct.product_code+'/00')}).then(function(r){
+    document.getElementById('editLoading').style.display='none';
+    if(r.error){esst('Could not load product details','se');document.getElementById('editContent').classList.remove('hd');return;}
+    editProd=r.product;
+
+    document.getElementById('enm').textContent=editProd.name;
+    document.getElementById('epr').textContent=editProd.currencySymbol+editProd.currentPrice.toFixed(2);
+    document.getElementById('esl').textContent=editProd.onSale?'Sale — was '+editProd.currencySymbol+editProd.originalPrice.toFixed(2):'';
+
+    // Set image for current color
+    var img=editingProduct.image_url||editProd.mainImage||'';
+    document.getElementById('eimg').src=img+'?width=200';
+
+    // Colors
+    if(editProd.colors.length>1){
+      var ch='';
+      for(var i=0;i<editProd.colors.length;i++){
+        var c=editProd.colors[i];
+        ch+='<button class="ob'+(c.code===editColor?' on':'')+'" onclick="epckC(\''+c.code+'\',this)">'+(c.name||c.code)+'</button>';
+      }
+      document.getElementById('ecols').innerHTML=ch;
+      document.getElementById('ecsec').classList.remove('hd');
+    }else{
+      document.getElementById('ecsec').classList.add('hd');
+      if(editProd.colors.length===1)editColor=editProd.colors[0].code;
+    }
+
+    // Sizes
+    eRefreshSizes();
+
+    // Target price
+    document.getElementById('etp').value=editingProduct.target_price||'';
+
+    document.getElementById('editContent').classList.remove('hd');
+  }).catch(function(){
+    document.getElementById('editLoading').style.display='none';
+    esst('Could not load product','se');
+    document.getElementById('editContent').classList.remove('hd');
+  });
+}
+
+function closeEdit(){document.getElementById('editModal').classList.remove('on');editingProduct=null;editProd=null;}
+function closeEditBg(e){if(e.target===document.getElementById('editModal'))closeEdit();}
+
+function epckC(c,el){
+  editColor=c;editSize='';
+  var bs=document.querySelectorAll('#ecols .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
+  if(editProd){for(var i=0;i<editProd.colors.length;i++)if(editProd.colors[i].code===c&&editProd.colors[i].image){document.getElementById('eimg').src=editProd.colors[i].image+'?width=200';break;}}
+  eRefreshSizes();
+}
+
+function epckS(c,el){
+  editSize=c;
+  var bs=document.querySelectorAll('#eszs .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
+}
+
+function eRefreshSizes(){
+  if(!editProd)return;
+  var sh='',avail=getAvailSizes(editProd,editColor);
+  for(var i=0;i<editProd.sizes.length;i++){
+    var sz=editProd.sizes[i];var ok=avail[sz.code];
+    var isSelected=sz.code===editSize;
+    if(!ok)sh+='<button class="ob" disabled>'+sz.name+'</button>';
+    else sh+='<button class="ob'+(isSelected?' on':'')+'" onclick="epckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
+  }
+  document.getElementById('eszs').innerHTML=sh;
+}
+
+function getEditColorName(){
+  if(!editProd||!editColor)return editColor;
+  for(var i=0;i<editProd.colors.length;i++)if(editProd.colors[i].code===editColor)return editProd.colors[i].name||editColor;
+  return editColor;
+}
+
+function saveEdit(){
+  if(!editingProduct)return;
+  if(!editSize){esst('Pick a size','se');return;}
+  var b=document.getElementById('ebtn');b.disabled=true;b.textContent='Saving...';
+
+  api({
+    action:'update',cid:CID,pid:editingProduct.id,
+    pc:editingProduct.product_code,
+    cc:editColor,cn:getEditColorName(),sc:editSize,
+    tp:document.getElementById('etp').value||'',
+    rg:editingProduct.region||'es'
+  }).then(function(r){
+    b.disabled=false;b.textContent='Save changes';
+    if(r.error){esst(r.error,'se');return;}
+    b.textContent='Saved';b.classList.add('btn-saved');
+    esst('Changes saved','so');
+
+    // Update cache
+    if(cachedProducts){
+      for(var i=0;i<cachedProducts.length;i++){
+        if(cachedProducts[i].id===editingProduct.id){
+          cachedProducts[i].color_code=editColor;
+          cachedProducts[i].color_name=getEditColorName();
+          cachedProducts[i].size_code=editSize;
+          cachedProducts[i].target_price=document.getElementById('etp').value||'';
+          if(editProd){
+            var img=getImageForColorLocal(editProd,editColor);
+            if(img)cachedProducts[i].image_url=img;
+          }
+          break;
+        }
+      }
+      localStorage.setItem('uq_products',JSON.stringify(cachedProducts));
+    }
+
+    setTimeout(function(){
+      b.textContent='Save changes';b.classList.remove('btn-saved');
+      closeEdit();renderP(cachedProducts);
+    },1000);
+  }).catch(function(){
+    b.disabled=false;b.textContent='Save changes';esst('Failed to save','se');
+  });
+}
+
+function getImageForColorLocal(product,colorCode){
+  if(!product||!product.colors||!colorCode)return '';
+  for(var i=0;i<product.colors.length;i++){if(product.colors[i].code===colorCode&&product.colors[i].image)return product.colors[i].image;}
+  return '';
+}
+
+function esst(msg,cls){var el=document.getElementById('est');el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
+
+/* ====== ADD PRODUCT ====== */
 function prev(){
   var url=document.getElementById('aurl').value.trim();if(!url)return;
   var b=document.getElementById('pbtn');b.disabled=true;b.textContent='Loading...';
@@ -317,6 +499,7 @@ function addP(){
   }).catch(function(e){b.disabled=false;b.textContent='Start watching';sst('ast','Failed to add','se');});
 }
 
+/* ====== SETTINGS ====== */
 function testTg(){
   var c=document.getElementById('cid').value.trim();if(!c){sst('tst','Enter your Chat ID','se');return;}
   var b=document.getElementById('tbtn');b.disabled=true;b.textContent='Sending...';
@@ -344,6 +527,7 @@ function loadSettings(){
 }
 function setSel(id,v){if(!v)return;var e=document.getElementById(id);for(var i=0;i<e.options.length;i++)if(e.options[i].value===String(v)){e.selectedIndex=i;break;}}
 
+/* ====== INIT ====== */
 if(CID){
   document.getElementById('cid').value=CID;document.getElementById('scid').textContent=CID;document.getElementById('cbanner').classList.remove('hd');
   loadP(true);loadSettings();
