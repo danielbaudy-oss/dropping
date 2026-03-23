@@ -152,11 +152,11 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
     <div class="sec">
       <h2>Telegram notifications</h2>
       <div id="cbanner" class="conn hd">Connected — Chat ID: <span id="scid"></span></div>
-      <div class="steps">
-        <b>1.</b> Message <b>@userinfobot</b> on Telegram<br>
-        <b>2.</b> It replies with your Chat ID number<br>
-        <b>3.</b> Paste it below and click Test
-      </div>
+<div class="steps">
+  <b>1.</b> Open <a href="https://t.me/dropping_alerts_bot" target="_blank" style="color:#FF0000;font-weight:600">@dropping_alerts_bot</a> and send any message<br>
+  <b>2.</b> Then open <a href="https://t.me/userinfobot" target="_blank" style="color:#FF0000;font-weight:600">@userinfobot</a> and send any message — it replies with your Chat ID<br>
+  <b>3.</b> Paste the ID number below and click Test
+</div>
       <label>Chat ID</label>
       <input type="text" id="cid" placeholder="Your Chat ID number">
       <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
