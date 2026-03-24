@@ -17,9 +17,7 @@ input,select,textarea{font-size:16px !important}
 .addbtn:hover{opacity:0.85}
 .setbtn{padding:4px 8px;border-radius:8px;font-size:20px;border:none;cursor:pointer;background:transparent;color:#999}
 .setbtn:hover{color:#333}
-
 .content{padding:20px 16px 16px}
-
 .card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;margin-bottom:10px;overflow:hidden;cursor:pointer;transition:box-shadow 0.15s}
 .card:active{box-shadow:0 0 0 2px rgba(255,0,0,0.2)}
 .ci{display:flex;padding:12px;gap:12px}
@@ -35,7 +33,6 @@ input,select,textarea{font-size:16px !important}
 .cl{font-size:11px;color:#FF0000;text-decoration:none}
 .bs{background:none;border:1px solid #e5e7eb;color:#999;font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer}
 .bs:hover{color:#FF0000;border-color:#FF0000}
-
 .overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:30;justify-content:center;align-items:flex-start}
 .overlay.on{display:flex}
 .modal{background:#fff;width:100%;max-width:600px;max-height:85vh;border-radius:0 0 16px 16px;padding:20px 16px 32px;overflow-y:auto;margin-top:0;animation:slideDown 0.25s ease-out}
@@ -44,13 +41,10 @@ input,select,textarea{font-size:16px !important}
 .modal-hdr h2{font-size:16px;font-weight:600}
 .modal-close{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:4px 8px}
 .modal-close:hover{color:#333}
-
 #confirmModal .modal{animation:none;margin-top:30vh;width:calc(100% - 32px);border-radius:16px;max-height:none}
-
 .pg{display:none;padding:0}.pg.on{display:block}
 .sec{background:#fff;border-radius:12px;border:1px solid #e5e7eb;padding:16px;margin-bottom:12px}
 .sec h2{font-size:15px;margin-bottom:10px}
-
 label{font-size:13px;font-weight:500;display:block;margin:10px 0 4px}
 input[type=text],input[type=number],select{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:14px;-webkit-appearance:none}
 input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px rgba(255,0,0,0.1)}
@@ -59,7 +53,6 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn:hover{opacity:0.92}
 .btn-saved{background:#16a34a !important;color:#fff !important}
-
 .pc{display:flex;gap:12px;margin-bottom:12px}
 .pi{width:90px;height:90px;object-fit:contain;border-radius:8px;background:#f3f4f6}
 .ppn{font-weight:600;font-size:15px}.ppp{font-size:20px;font-weight:700;margin-top:4px}.pps{color:#FF0000;font-size:13px}
@@ -67,29 +60,22 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 .ob{padding:6px 14px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:13px}
 .ob.on{border-color:#FF0000;background:#fff5f5}
 .ob:disabled{opacity:0.3;cursor:not-allowed;text-decoration:line-through}
-
 .st{text-align:center;padding:10px;font-size:13px;border-radius:8px;margin-top:10px}
 .se{background:#fef2f2;color:#e11d48}.so{background:#dcfce7;color:#16a34a}
 .hd{display:none}
-
 .empty{text-align:center;padding:60px 20px}
 .empty h2{font-size:17px;color:#666;margin-bottom:8px}
 .empty p{color:#999;font-size:13px;line-height:1.5}
-
 .banner{background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;cursor:pointer;color:#FF0000}
 .banner:hover{background:#fef2f2}
-
 .steps{background:#f5f5f5;border-radius:8px;padding:10px;font-size:12px;line-height:1.6;margin-bottom:10px}
 .steps b{color:#FF0000}
 .steps a{color:#FF0000;font-weight:600}
 .conn{background:#dcfce7;border-radius:8px;padding:10px;font-size:13px;color:#16a34a;margin-bottom:10px}
-
 .backbtn{background:none;border:none;font-size:18px;color:#888;cursor:pointer;padding:4px 8px}
 .backbtn:hover{color:#333}
-
 .loader{display:inline-block;width:16px;height:16px;border:2px solid #ddd;border-top-color:#333;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 .refreshbtn{background:none;border:1px solid #d1d5db;color:#888;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:auto}
 .refreshbtn:hover{color:#FF0000;border-color:#FF0000}
 </style>
@@ -201,55 +187,14 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
       <div id="tst" class="hd"></div>
     </div>
-
     <div class="sec">
       <h2>Default sizes</h2>
       <label>Tops (T-shirts, shirts, jackets)</label>
-      <select id="sts">
-        <option value="">Not set</option>
-        <option value="XXS">XXS</option>
-        <option value="XS">XS</option>
-        <option value="S">S</option>
-        <option value="M">M</option>
-        <option value="L">L</option>
-        <option value="XL">XL</option>
-        <option value="XXL">XXL</option>
-        <option value="3XL">3XL</option>
-      </select>
+      <select id="sts"><option value="">Not set</option><option value="XXS">XXS</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option><option value="3XL">3XL</option></select>
       <label>Bottoms (Pants, jeans, shorts)</label>
-      <select id="sb">
-        <option value="">Not set</option>
-        <option value="28">28</option>
-        <option value="29">29</option>
-        <option value="30">30</option>
-        <option value="31">31</option>
-        <option value="32">32</option>
-        <option value="33">33</option>
-        <option value="34">34</option>
-        <option value="36">36</option>
-        <option value="38">38</option>
-        <option value="40">40</option>
-        <option value="XS">XS</option>
-        <option value="S">S</option>
-        <option value="M">M</option>
-        <option value="L">L</option>
-        <option value="XL">XL</option>
-      </select>
+      <select id="sb"><option value="">Not set</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option><option value="32">32</option><option value="33">33</option><option value="34">34</option><option value="36">36</option><option value="38">38</option><option value="40">40</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option></select>
       <label>Region</label>
-      <select id="rg">
-        <option value="es">Spain</option>
-        <option value="uk">United Kingdom</option>
-        <option value="us">United States</option>
-        <option value="de">Germany</option>
-        <option value="fr">France</option>
-        <option value="it">Italy</option>
-        <option value="nl">Netherlands</option>
-        <option value="be">Belgium</option>
-        <option value="pt">Portugal</option>
-        <option value="se">Sweden</option>
-        <option value="dk">Denmark</option>
-        <option value="pl">Poland</option>
-      </select>
+      <select id="rg"><option value="es">Spain</option><option value="uk">United Kingdom</option><option value="us">United States</option><option value="de">Germany</option><option value="fr">France</option><option value="it">Italy</option><option value="nl">Netherlands</option><option value="be">Belgium</option><option value="pt">Portugal</option><option value="se">Sweden</option><option value="dk">Denmark</option><option value="pl">Poland</option></select>
       <button class="btn bblk" id="savbtn" onclick="saveSet()">Save</button>
       <div id="sst" class="hd"></div>
     </div>
@@ -263,7 +208,6 @@ var cProd=null,cParsed=null,selColor='',selSize='';
 var cachedProducts=null;
 var settingsLoaded=false;
 var pendingRemoveId=null;
-
 var editingProduct=null;
 var editProd=null;
 var editColor='';
@@ -275,23 +219,9 @@ var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL'
 var CSYM={GBP:'£',USD:'$',CHF:'CHF',SEK:'kr',DKK:'kr',NOK:'kr',PLN:'zł',EUR:'€'};
 
 function szName(c){return SZN[c]||c||'';}
-
-function esc(s){
-  if(!s)return '';
-  var d=document.createElement('div');
-  d.textContent=String(s);
-  return d.innerHTML.replace(/'/g,'&#39;');
-}
-
-function imgUrl(src,width){
-  if(!src)return '';
-  return src+(src.indexOf('?')===-1?'?':'&')+'width='+width;
-}
-
-function detectStoreJS(url){
-  if(url&&url.indexOf('arket.com')!==-1)return 'arket';
-  return 'uniqlo';
-}
+function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML.replace(/'/g,'&#39;');}
+function imgUrl(src,width){if(!src)return '';return src+(src.indexOf('?')===-1?'?':'&')+'width='+width;}
+function detectStoreJS(url){if(url&&url.indexOf('arket.com')!==-1)return 'arket';return 'uniqlo';}
 
 function api(params){
   var url=API+'?'+Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
@@ -302,16 +232,232 @@ function cacheProductData(productCode,region,data){
   try{localStorage.setItem('uq_pdata_'+productCode+'_'+region,JSON.stringify({ts:Date.now(),data:data}));}catch(e){}
 }
 function getCachedProductData(productCode,region){
-  try{
-    var raw=localStorage.getItem('uq_pdata_'+productCode+'_'+region);
-    if(!raw)return null;
-    var obj=JSON.parse(raw);
-    if(Date.now()-obj.ts>3600000)return null;
-    return obj.data;
-  }catch(e){return null;}
+  try{var raw=localStorage.getItem('uq_pdata_'+productCode+'_'+region);if(!raw)return null;var obj=JSON.parse(raw);if(Date.now()-obj.ts>3600000)return null;return obj.data;}catch(e){return null;}
 }
 function clearProductCache(productCode,region){
   try{localStorage.removeItem('uq_pdata_'+productCode+'_'+region);}catch(e){}
+}
+
+/* ====== ARKET CLIENT-SIDE FETCHING ====== */
+
+function parseArketUrlJS(url){
+  var m=url.match(/arket\.com\/([a-z]{2}-[a-z]{2})\/product\/([^\/?#]+)/i);
+  if(!m)return null;
+  var lm=m[1].toLowerCase();
+  var slug=m[2].replace(/\/$/,'').replace(/\.html$/,'');
+  var skuM=slug.match(/(\d{10})$/);
+  if(!skuM)return null;
+  return{productCode:skuM[1],slug:slug,languageMarket:lm,region:lm,colorCode:skuM[1],store:'arket'};
+}
+
+var ARKET_CUR_MAP={
+  'en-gb':{code:'GBP',symbol:'£'},'en-dk':{code:'DKK',symbol:'kr'},'en-se':{code:'SEK',symbol:'kr'},
+  'sv-se':{code:'SEK',symbol:'kr'},'en-no':{code:'NOK',symbol:'kr'},'de-de':{code:'EUR',symbol:'€'},
+  'de-at':{code:'EUR',symbol:'€'},'de-ch':{code:'CHF',symbol:'CHF'},'en-ch':{code:'CHF',symbol:'CHF'},
+  'fr-ch':{code:'CHF',symbol:'CHF'},'fr-fr':{code:'EUR',symbol:'€'},'it-it':{code:'EUR',symbol:'€'},
+  'es-es':{code:'EUR',symbol:'€'},'en-nl':{code:'EUR',symbol:'€'},'pl-pl':{code:'PLN',symbol:'zł'},
+  'en-eu':{code:'EUR',symbol:'€'}
+};
+
+function fetchArketClientSide(url){
+  var parsed=parseArketUrlJS(url);
+  if(!parsed)return Promise.reject('Invalid ARKET URL');
+
+  // The user's browser can fetch ARKET pages (no bot block)
+  // We use a CORS proxy since arket.com doesn't set CORS headers
+  var proxies=[
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?',
+    'https://api.codetabs.com/v1/proxy?quest='
+  ];
+
+  function tryProxy(i){
+    if(i>=proxies.length)return Promise.reject('Could not fetch ARKET product');
+    var proxyUrl=proxies[i]+encodeURIComponent(url);
+    return fetch(proxyUrl).then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.text();
+    }).then(function(html){
+      if(!html||html.length<500)throw new Error('Empty response');
+      var product=parseArketHtmlClient(html,parsed);
+      if(!product)throw new Error('Could not parse product');
+      return product;
+    }).catch(function(e){
+      return tryProxy(i+1);
+    });
+  }
+
+  return tryProxy(0);
+}
+
+function parseArketHtmlClient(html,parsed){
+  var lm=parsed.languageMarket||'en-gb';
+  var curInfo=ARKET_CUR_MAP[lm]||{code:'EUR',symbol:'€'};
+
+  // Strategy 1: __NEXT_DATA__
+  var ndMatch=html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+  if(ndMatch){
+    try{
+      var nd=JSON.parse(ndMatch[1]);
+      var pp=nd.props?(nd.props.pageProps||null):(nd.pageProps||null);
+      if(pp){
+        // Update currency from localization
+        if(pp.localizationContext&&pp.localizationContext.currency){
+          var cc=pp.localizationContext.currency;
+          var symMap={GBP:'£',EUR:'€',USD:'$',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',PLN:'zł'};
+          curInfo={code:cc,symbol:symMap[cc]||'€'};
+        }
+        var prod=findProductInPP(pp);
+        if(prod)return normaliseArketClient(prod,parsed,curInfo);
+      }
+    }catch(e){}
+  }
+
+  // Strategy 2: JSON-LD
+  var ldRe=/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+  var ldM;
+  while((ldM=ldRe.exec(html))!==null){
+    try{
+      var ld=JSON.parse(ldM[1]);
+      if(Array.isArray(ld)){for(var i=0;i<ld.length;i++){if(ld[i]['@type']==='Product')return normaliseJsonLdClient(ld[i],parsed,curInfo,html);}}
+      else if(ld['@type']==='Product')return normaliseJsonLdClient(ld,parsed,curInfo,html);
+    }catch(e){}
+  }
+
+  // Strategy 3: Meta tags
+  return normaliseMetaClient(html,parsed,curInfo);
+}
+
+function findProductInPP(pp){
+  if(pp.blocks){for(var i=0;i<pp.blocks.length;i++){if(pp.blocks[i].product)return pp.blocks[i].product;}}
+  if(pp.product)return pp.product;
+  if(pp.productData)return pp.productData;
+  function deep(o,d){
+    if(!o||d>5||typeof o!=='object')return null;
+    if(o.sku&&o.name&&(o.items||o.priceAsNumber!==undefined))return o;
+    var ks=Object.keys(o);
+    for(var k=0;k<ks.length;k++){var f=deep(o[ks[k]],d+1);if(f)return f;}
+    return null;
+  }
+  return deep(pp,0);
+}
+
+function normaliseArketClient(prod,parsed,curInfo){
+  var allV=[prod];
+  var rv=(prod.relatedProducts||[]).filter(function(r){return r.relation==='variant';});
+  allV=allV.concat(rv);
+
+  var colorMap={},sizeSet={};
+  for(var v=0;v<allV.length;v++){
+    var vr=allV[v];
+    var sku=vr.sku||vr.var_number_key||'';
+    var cn=vr.variantName||vr.var_pdp_color_desc||'';
+    var img=(vr.media&&vr.media.standard&&vr.media.standard[0])||'';
+    var vp=vr.priceAsNumber||0;
+    var vb=vr.priceBeforeDiscountAsNumber||vp;
+    var vs=vr.discountPercent>0||vp<vb;
+    var szs=[];
+    var items=vr.items||[];
+    for(var s=0;s<items.length;s++){
+      var it=items[s];
+      var sn=it.name||'';
+      sizeSet[sn]=true;
+      szs.push({sizeCode:sn,sizeName:sn,currentPrice:vp,basePrice:vb,onSale:vs,inStock:it.stock!=='no',currency:curInfo.code,currencySymbol:curInfo.symbol});
+    }
+    colorMap[sku]={code:sku,name:cn,hex:'',image:img,sizes:szs,available:vr.available!==false};
+  }
+
+  var colors=Object.keys(colorMap).map(function(k){return colorMap[k];});
+  colors.sort(function(a,b){return(a.available&&!b.available)?-1:(!a.available&&b.available)?1:0;});
+  var sizes=Object.keys(sizeSet).map(function(k){return{code:k,name:k};});
+  var cp=prod.priceAsNumber||0;
+  var op=prod.priceBeforeDiscountAsNumber||cp;
+  var mi=(prod.media&&prod.media.standard&&prod.media.standard[0])||'';
+  var nm=prod.name||'Unknown';
+  var cat=nm.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
+
+  return{
+    productCode:parsed.productCode,name:nm,image:mi,category:cat,
+    currentPrice:cp,originalPrice:op,onSale:cp<op,
+    currency:curInfo.code,currencySymbol:curInfo.symbol,
+    colors:colors,sizes:sizes,region:parsed.languageMarket,mainImage:mi,store:'arket'
+  };
+}
+
+function normaliseJsonLdClient(ld,parsed,curInfo,html){
+  var name=ld.name||'Unknown';
+  var mi='';
+  if(ld.image)mi=Array.isArray(ld.image)?ld.image[0]:ld.image;
+  var cp=0,op=0,cur=curInfo.code;
+  var offers=ld.offers;
+  if(offers){
+    if(Array.isArray(offers)){
+      for(var i=0;i<offers.length;i++){
+        var p=parseFloat(offers[i].price)||0;
+        if(p>0&&(cp===0||p<cp))cp=p;
+        if(p>op)op=p;
+        if(offers[i].priceCurrency)cur=offers[i].priceCurrency;
+      }
+    }else{cp=parseFloat(offers.price)||0;op=cp;if(offers.priceCurrency)cur=offers.priceCurrency;}
+  }
+  if(op===0)op=cp;
+  var symMap={GBP:'£',EUR:'€',USD:'$',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',PLN:'zł'};
+  var sym=symMap[cur]||curInfo.symbol;
+
+  var szNames=extractSizesClient(html);
+  var sizes=[],cszs=[];
+  for(var s=0;s<szNames.length;s++){
+    sizes.push({code:szNames[s],name:szNames[s]});
+    cszs.push({sizeCode:szNames[s],sizeName:szNames[s],currentPrice:cp,basePrice:op,onSale:cp<op,inStock:true,currency:cur,currencySymbol:sym});
+  }
+  var cat=name.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
+  return{
+    productCode:parsed.productCode,name:name,image:mi,category:cat,
+    currentPrice:cp,originalPrice:op,onSale:cp<op,currency:cur,currencySymbol:sym,
+    colors:[{code:parsed.productCode,name:'',hex:'',image:mi,sizes:cszs,available:true}],
+    sizes:sizes,region:parsed.languageMarket,mainImage:mi,store:'arket'
+  };
+}
+
+function normaliseMetaClient(html,parsed,curInfo){
+  function getMeta(prop){
+    var r1=new RegExp('<meta[^>]*property="'+prop+'"[^>]*content="([^"]*)"','i');
+    var r2=new RegExp('<meta[^>]*content="([^"]*)"[^>]*property="'+prop+'"','i');
+    var m=html.match(r1)||html.match(r2);return m?m[1]:null;
+  }
+  var name=getMeta('og:title');
+  if(name)name=name.replace(/\s*[-|]\s*ARKET$/i,'').trim();else name='Unknown';
+  var mi=getMeta('og:image')||'';
+  var ps=getMeta('product:price:amount');
+  var cp=ps?(parseFloat(ps)||0):0;
+  var cur=getMeta('product:price:currency')||curInfo.code;
+  if(name==='Unknown'||cp===0)return null;
+  var symMap={GBP:'£',EUR:'€',USD:'$',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',PLN:'zł'};
+  var sym=symMap[cur]||curInfo.symbol;
+  var szNames=extractSizesClient(html);
+  var sizes=[],cszs=[];
+  for(var s=0;s<szNames.length;s++){
+    sizes.push({code:szNames[s],name:szNames[s]});
+    cszs.push({sizeCode:szNames[s],sizeName:szNames[s],currentPrice:cp,basePrice:cp,onSale:false,inStock:true,currency:cur,currencySymbol:sym});
+  }
+  var cat=name.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
+  return{
+    productCode:parsed.productCode,name:name,image:mi,category:cat,
+    currentPrice:cp,originalPrice:cp,onSale:false,currency:cur,currencySymbol:sym,
+    colors:[{code:parsed.productCode,name:'',hex:'',image:mi,sizes:cszs,available:true}],
+    sizes:sizes,region:parsed.languageMarket,mainImage:mi,store:'arket'
+  };
+}
+
+function extractSizesClient(html){
+  var sizes=[],seen={},m;
+  var r1=/data-size[=]["']([^"']+)["']/gi;
+  while((m=r1.exec(html))!==null){if(!seen[m[1]]){seen[m[1]]=true;sizes.push(m[1]);}}
+  if(sizes.length>0)return sizes;
+  var r2=/(?:>|\b)(XXS|XS|S|M|L|XL|XXL|3XL|ONE SIZE)(?:<|\b)/g;
+  while((m=r2.exec(html))!==null){if(!seen[m[1]]){seen[m[1]]=true;sizes.push(m[1]);}}
+  if(sizes.length>0)return sizes;
+  return['XS','S','M','L','XL'];
 }
 
 /* ====== NAVIGATION ====== */
@@ -330,14 +476,7 @@ function loadP(force){
   }
   var localCache=localStorage.getItem('uq_products');
   if(localCache){
-    try{
-      var cached=JSON.parse(localCache);
-      cachedProducts=cached;
-      renderP(cached);
-    }catch(e){
-      localStorage.removeItem('uq_products');
-      document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';
-    }
+    try{var cached=JSON.parse(localCache);cachedProducts=cached;renderP(cached);}catch(e){localStorage.removeItem('uq_products');document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';}
   }else if(!force&&cachedProducts!==null){
     renderP(cachedProducts);return;
   }else{
@@ -366,7 +505,6 @@ function renderP(ps){
     var s=CSYM[p.currency]||'€';
     var storeName=store==='arket'?'ARKET':'Uniqlo';
     var sizeDisplay=store==='arket'?esc(p.size_code||''):esc(szName(String(p.size_code)));
-
     h+='<div class="card" id="c-'+esc(p.id)+'" onclick="openEdit(\''+esc(p.id)+'\')">';
     h+='<div class="ci">';
     h+='<img class="cimg" src="'+esc(p.image_url||'')+'" alt="'+esc(p.name||'Product')+'" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
@@ -408,7 +546,6 @@ function confirmYes(){
 function confirmNo(){pendingRemoveId=null;document.getElementById('confirmModal').classList.remove('on');}
 function closeConfirmBg(e){if(e.target===document.getElementById('confirmModal'))confirmNo();}
 
-/* ====== EDIT REMOVE — capture id before closeEdit nullifies editingProduct ====== */
 function editRemove(){
   if(!editingProduct)return;
   var eid=editingProduct.id;
@@ -422,25 +559,18 @@ function openEdit(id){
   editingProduct=null;
   for(var i=0;i<cachedProducts.length;i++){if(cachedProducts[i].id===id){editingProduct=cachedProducts[i];break;}}
   if(!editingProduct)return;
-
   var store=editingProduct.store||'uniqlo';
   editProd=null;editColor=editingProduct.color_code||'';editSize=String(editingProduct.size_code||'');
   document.getElementById('editContent').classList.add('hd');
   document.getElementById('editLoading').style.display='block';
   document.getElementById('est').classList.add('hd');
   document.getElementById('editModal').classList.add('on');
-
   var pc=editingProduct.product_code;
   var rg=editingProduct.region||'es';
   var cached=getCachedProductData(pc,rg);
-
-  if(cached){
-    populateEditModal(cached);
-  }else if(store==='arket'){
-    fetchEditDataArket(editingProduct.product_url);
-  }else{
-    fetchEditData(pc,rg);
-  }
+  if(cached){populateEditModal(cached);}
+  else if(store==='arket'){fetchEditDataArket(editingProduct.product_url);}
+  else{fetchEditData(pc,rg);}
 }
 
 function fetchEditData(pc,rg){
@@ -456,20 +586,23 @@ function fetchEditData(pc,rg){
     document.getElementById('editContent').classList.remove('hd');
   });
 }
+
 function fetchEditDataArket(productUrl){
   var fullUrl=productUrl;
   if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.arket.com'+fullUrl;
-  api({action:'preview',url:fullUrl}).then(function(r){
+
+  // Use client-side fetch for ARKET
+  fetchArketClientSide(fullUrl).then(function(product){
+    cacheProductData(editingProduct.product_code,editingProduct.region,product);
     document.getElementById('editLoading').style.display='none';
-    if(r.error){esst('Could not load product details','se');document.getElementById('editContent').classList.remove('hd');return;}
-    cacheProductData(editingProduct.product_code,editingProduct.region,r.product);
-    populateEditModal(r.product);
-  }).catch(function(){
+    populateEditModal(product);
+  }).catch(function(err){
     document.getElementById('editLoading').style.display='none';
-    esst('Could not load product','se');
+    esst('Could not load ARKET product: '+err,'se');
     document.getElementById('editContent').classList.remove('hd');
   });
 }
+
 function editRefreshFromApi(){
   if(!editingProduct)return;
   var btn=document.getElementById('eRefreshBtn');
@@ -482,8 +615,27 @@ function editRefreshFromApi(){
   document.getElementById('est').classList.add('hd');
 
   var store=editingProduct.store||'uniqlo';
-  var url=editingProduct.product_url||(store==='arket'?'':('https://www.uniqlo.com/'+(rg||'es')+'/en/products/'+pc+'/00'));
-  if(!url){esst('Missing product URL','se');btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;document.getElementById('editContent').classList.remove('hd');return;}
+
+  if(store==='arket'){
+    var fullUrl=editingProduct.product_url||'';
+    if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.arket.com'+fullUrl;
+    if(!fullUrl){esst('Missing product URL','se');btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;document.getElementById('editContent').classList.remove('hd');return;}
+    fetchArketClientSide(fullUrl).then(function(product){
+      btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
+      document.getElementById('editLoading').style.display='none';
+      cacheProductData(pc,rg,product);
+      populateEditModal(product);
+      esst('Stock refreshed','so');
+    }).catch(function(){
+      btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
+      document.getElementById('editLoading').style.display='none';
+      esst('Refresh failed','se');
+      document.getElementById('editContent').classList.remove('hd');
+    });
+    return;
+  }
+
+  var url=editingProduct.product_url||('https://www.uniqlo.com/'+(rg||'es')+'/en/products/'+pc+'/00');
   api({action:'preview',url:url}).then(function(r){
     btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
     document.getElementById('editLoading').style.display='none';
@@ -502,14 +654,11 @@ function editRefreshFromApi(){
 function populateEditModal(product){
   editProd=product;
   document.getElementById('editLoading').style.display='none';
-
   document.getElementById('enm').textContent=product.name;
   document.getElementById('epr').textContent=product.currencySymbol+product.currentPrice.toFixed(2);
   document.getElementById('esl').textContent=product.onSale?'Sale — was '+product.currencySymbol+product.originalPrice.toFixed(2):'';
-
   var img=editingProduct.image_url||product.mainImage||'';
   document.getElementById('eimg').src=imgUrl(img,200);
-
   if(product.colors.length>1){
     var ch='';
     for(var i=0;i<product.colors.length;i++){
@@ -522,7 +671,6 @@ function populateEditModal(product){
     document.getElementById('ecsec').classList.add('hd');
     if(product.colors.length===1)editColor=product.colors[0].code;
   }
-
   eRefreshSizes();
   document.getElementById('etp').value=editingProduct.target_price||'';
   document.getElementById('editContent').classList.remove('hd');
@@ -565,7 +713,6 @@ function saveEdit(){
   if(!editingProduct)return;
   if(!editSize){esst('Pick a size','se');return;}
   var b=document.getElementById('ebtn');b.disabled=true;b.textContent='Saving...';
-
   api({
     action:'update',cid:CID,pid:editingProduct.id,
     pc:editingProduct.product_code,
@@ -579,7 +726,6 @@ function saveEdit(){
     if(r.error){esst(r.error,'se');return;}
     b.textContent='Saved';b.classList.add('btn-saved');
     esst('Changes saved','so');
-
     if(cachedProducts){
       for(var i=0;i<cachedProducts.length;i++){
         if(cachedProducts[i].id===editingProduct.id){
@@ -587,23 +733,14 @@ function saveEdit(){
           cachedProducts[i].color_name=getEditColorName();
           cachedProducts[i].size_code=editSize;
           cachedProducts[i].target_price=document.getElementById('etp').value||'';
-          if(editProd){
-            var img=getImageForColorLocal(editProd,editColor);
-            if(img)cachedProducts[i].image_url=img;
-          }
+          if(editProd){var img=getImageForColorLocal(editProd,editColor);if(img)cachedProducts[i].image_url=img;}
           break;
         }
       }
       localStorage.setItem('uq_products',JSON.stringify(cachedProducts));
     }
-
-    setTimeout(function(){
-      b.textContent='Save changes';b.classList.remove('btn-saved');
-      closeEdit();renderP(cachedProducts);
-    },1000);
-  }).catch(function(){
-    b.disabled=false;b.textContent='Save changes';esst('Failed to save','se');
-  });
+    setTimeout(function(){b.textContent='Save changes';b.classList.remove('btn-saved');closeEdit();renderP(cachedProducts);},1000);
+  }).catch(function(){b.disabled=false;b.textContent='Save changes';esst('Failed to save','se');});
 }
 
 function getImageForColorLocal(product,colorCode){
@@ -621,34 +758,74 @@ function prev(){
   cFullUrl=url;
   var b=document.getElementById('pbtn');b.disabled=true;b.textContent='Loading...';
   document.getElementById('ast').classList.add('hd');
+
+  if(cStore==='arket'){
+    // Client-side fetch for ARKET
+    prevArketClient(url,b);
+    return;
+  }
+
+  // Uniqlo: server-side
   api({action:'preview',url:url}).then(function(r){
     b.disabled=false;b.textContent='Look up product';
     if(r.error){sst('ast',r.error,'se');return;}
-    cProd=r.product;cParsed=r.parsed;
-    cStore=r.store||detectStoreJS(url);
-    selColor=r.parsed.colorCode||'';selSize='';
-
-    cacheProductData(r.parsed.productCode,r.parsed.region,r.product);
-
-    document.getElementById('pimg').src=imgUrl(r.product.mainImage||'',200);
-    document.getElementById('pnm').textContent=r.product.name;
-    document.getElementById('ppr').textContent=r.product.currencySymbol+r.product.currentPrice.toFixed(2);
-    document.getElementById('psl').textContent=r.product.onSale?'Sale — was '+r.product.currencySymbol+r.product.originalPrice.toFixed(2):'';
-    if(r.product.colors.length>1){
-      var ch='';
-      for(var i=0;i<r.product.colors.length;i++){
-        var c=r.product.colors[i];
-        ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';
-      }
-      document.getElementById('cols').innerHTML=ch;
-      document.getElementById('csec').classList.remove('hd');
-    }else{
-      document.getElementById('csec').classList.add('hd');
-      if(r.product.colors.length===1)selColor=r.product.colors[0].code;
-    }
-    refreshSizes();
-    document.getElementById('psec').classList.remove('hd');
+    handlePreviewResult(r,url);
   }).catch(function(e){b.disabled=false;b.textContent='Look up product';sst('ast','Failed to load product','se');});
+}
+
+function prevArketClient(url,b){
+  fetchArketClientSide(url).then(function(product){
+    // Now send to backend to get parsed info and register
+    var parsed=parseArketUrlJS(url);
+    if(!parsed){b.disabled=false;b.textContent='Look up product';sst('ast','Invalid ARKET URL','se');return;}
+
+    // Send the client-parsed product to the backend
+    api({action:'preview',url:url,cp:JSON.stringify(product)}).then(function(r){
+      b.disabled=false;b.textContent='Look up product';
+      if(r.error){sst('ast',r.error,'se');return;}
+      handlePreviewResult(r,url);
+    }).catch(function(){
+      b.disabled=false;b.textContent='Look up product';
+      // Even if backend fails, we can still show the product locally
+      cProd=product;
+      cParsed=parsed;
+      cStore='arket';
+      showPreviewProduct(product,parsed);
+    });
+  }).catch(function(err){
+    b.disabled=false;b.textContent='Look up product';
+    sst('ast','Could not load ARKET product. Try again.','se');
+  });
+}
+
+function handlePreviewResult(r,url){
+  cProd=r.product;cParsed=r.parsed;
+  cStore=r.store||detectStoreJS(url);
+  selColor=r.parsed.colorCode||'';selSize='';
+  cacheProductData(r.parsed.productCode,r.parsed.region,r.product);
+  showPreviewProduct(r.product,r.parsed);
+}
+
+function showPreviewProduct(product,parsed){
+  selColor=parsed.colorCode||'';selSize='';
+  document.getElementById('pimg').src=imgUrl(product.mainImage||'',200);
+  document.getElementById('pnm').textContent=product.name;
+  document.getElementById('ppr').textContent=product.currencySymbol+product.currentPrice.toFixed(2);
+  document.getElementById('psl').textContent=product.onSale?'Sale — was '+product.currencySymbol+product.originalPrice.toFixed(2):'';
+  if(product.colors.length>1){
+    var ch='';
+    for(var i=0;i<product.colors.length;i++){
+      var c=product.colors[i];
+      ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';
+    }
+    document.getElementById('cols').innerHTML=ch;
+    document.getElementById('csec').classList.remove('hd');
+  }else{
+    document.getElementById('csec').classList.add('hd');
+    if(product.colors.length===1)selColor=product.colors[0].code;
+  }
+  refreshSizes();
+  document.getElementById('psec').classList.remove('hd');
 }
 
 function refreshSizes(){
@@ -682,7 +859,15 @@ function addP(){
   if(!CID){sst('ast','Connect Telegram first','se');return;}
   if(!selSize){sst('ast','Pick a size','se');return;}
   var b=document.getElementById('abtn');b.disabled=true;b.textContent='Adding...';
-  api({action:'add',cid:CID,pc:cParsed.productCode,cc:selColor,cn:getSelColorName(),sc:selSize,tp:document.getElementById('tp').value||'',rg:cParsed.region,store:cStore,purl:cFullUrl}).then(function(r){
+
+  // For ARKET, if cParsed came from client-side, build it from local parsed data
+  var parsedToUse=cParsed;
+  if(!parsedToUse&&cStore==='arket'){
+    parsedToUse=parseArketUrlJS(cFullUrl);
+  }
+  if(!parsedToUse){sst('ast','Missing product data','se');b.disabled=false;b.textContent='Start watching';return;}
+
+  api({action:'add',cid:CID,pc:parsedToUse.productCode,cc:selColor,cn:getSelColorName(),sc:selSize,tp:document.getElementById('tp').value||'',rg:parsedToUse.region,store:cStore,purl:cFullUrl}).then(function(r){
     b.disabled=false;b.textContent='Start watching';
     if(r.error){sst('ast',r.error,'se');return;}
     sst('ast','Now watching '+r.name,'so');
