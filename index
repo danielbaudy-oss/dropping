@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta<input type="text" id="aurl" placeholder="https://www.uniqlo.com/...">=1,maximum-scale=1,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <title>dropping — price alerts</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FAEBD7;color:#333;max-width:600px;margin:0 auto;min-height:100vh}
-
+input,select,textarea{font-size:16px !important}
 .hdr{background:#fff;border-bottom:1px solid #e0e0e0;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
 .hdr h1{font-size:18px;font-weight:700;letter-spacing:-0.3px}
 .hdr h1 span{color:#FF0000}
