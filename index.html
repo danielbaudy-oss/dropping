@@ -117,8 +117,8 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <button class="modal-close" onclick="closeAdd()">&#10005;</button>
     </div>
     <label>Product URL</label>
-    <div style="font-size:11px;color:#888;margin-bottom:6px">Copy a product link from <a href="https://www.uniqlo.com" target="_blank" style="color:#FF0000">uniqlo.com</a></div>
-    <input type="text" id="aurl" placeholder="https://www.uniqlo.com/...">
+    <div style="font-size:11px;color:#888;margin-bottom:6px">Copy a product link from <a href="https://www.uniqlo.com" target="_blank" style="color:#FF0000">uniqlo.com</a> or <a href="https://www.arket.com" target="_blank" style="color:#FF0000">arket.com</a></div>
+    <input type="text" id="aurl" placeholder="https://www.uniqlo.com/... or https://www.arket.com/...">
     <button class="btn bblk" id="pbtn" onclick="prev()">Look up product</button>
     <div id="psec" class="hd" style="margin-top:16px">
       <div class="pc">
@@ -268,7 +268,10 @@ var editingProduct=null;
 var editProd=null;
 var editColor='';
 var editSize='';
+var cStore='uniqlo';
+var cFullUrl='';
 
+  
 var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL','001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','28':'28','29':'29','30':'30','31':'31','32':'32','33':'33','34':'34','36':'36'};
 function szName(c){return SZN[c]||c||'';}
 
@@ -278,6 +281,10 @@ function esc(s){
   var d=document.createElement('div');
   d.textContent=String(s);
   return d.innerHTML;
+}
+  function detectStoreJS(url){
+  if(url&&url.indexOf('arket.com')!==-1)return 'arket';
+  return 'uniqlo';
 }
 
 function api(params){
@@ -344,20 +351,25 @@ function renderP(ps){
   }
   var h='';
   for(var i=0;i<ps.length;i++){
-    var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0,s=p.currency==='USD'?'$':'€';
+    var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0;
+    var store=p.store||'uniqlo';
+    var s=p.currency==='GBP'?'£':p.currency==='USD'?'$':p.currency==='CHF'?'CHF':(p.currency==='SEK'||p.currency==='DKK'||p.currency==='NOK')?'kr':p.currency==='PLN'?'zł':'€';
+    var storeName=store==='arket'?'ARKET':'Uniqlo';
+    var sizeDisplay=store==='arket'?esc(p.size_code||''):esc(szName(String(p.size_code)));
+
     h+='<div class="card" id="c-'+esc(p.id)+'" onclick="openEdit(\''+esc(p.id)+'\')">';
     h+='<div class="ci">';
-    h+='<img class="cimg" src="'+esc(p.image_url||'')+'?width=200" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
+    h+='<img class="cimg" src="'+esc(p.image_url||'')+'" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
     h+='<div style="flex:1;min-width:0">';
     h+='<div class="cn">'+esc(p.name||'?')+'</div>';
-    h+='<div class="cm">'+esc(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+esc(szName(String(p.size_code))):'')+'</div>';
+    h+='<div class="cm">'+esc(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+sizeDisplay:'')+'</div>';
     h+='<div class="cp"><span class="pn'+(d?' pd':'')+'">'+esc(s+l.toFixed(2))+'</span>';
     if(d)h+='<span class="po">'+esc(s+n.toFixed(2))+'</span><span class="bg bgr">-'+pc+'%</span>';
     h+='</div>';
     if(p.target_price)h+='<div style="margin-top:3px"><span class="bg bgy">Target: '+esc(s+parseFloat(p.target_price).toFixed(2))+'</span></div>';
     h+='<div class="cm">Lowest: '+esc(s+w.toFixed(2))+'</div>';
     h+='</div></div>';
-    h+='<div class="cb"><a class="cl" href="'+esc(p.product_url||'#')+'" target="_blank" onclick="event.stopPropagation()">View on Uniqlo</a>';
+    h+='<div class="cb"><a class="cl" href="'+esc(p.product_url||'#')+'" target="_blank" onclick="event.stopPropagation()">View on '+esc(storeName)+'</a>';
     h+='<button class="bs" onclick="event.stopPropagation();remP(\''+esc(p.id)+'\')">Remove</button></div></div>';
   }
   document.getElementById('hb').innerHTML='';
@@ -393,19 +405,21 @@ function openEdit(id){
   for(var i=0;i<cachedProducts.length;i++){if(cachedProducts[i].id===id){editingProduct=cachedProducts[i];break;}}
   if(!editingProduct)return;
 
+  var store=editingProduct.store||'uniqlo';
   editProd=null;editColor=editingProduct.color_code||'';editSize=String(editingProduct.size_code||'');
   document.getElementById('editContent').classList.add('hd');
   document.getElementById('editLoading').style.display='block';
   document.getElementById('est').classList.add('hd');
   document.getElementById('editModal').classList.add('on');
 
-  // FIX #2: Check cache first
   var pc=editingProduct.product_code;
   var rg=editingProduct.region||'es';
   var cached=getCachedProductData(pc,rg);
 
   if(cached){
     populateEditModal(cached);
+  }else if(store==='arket'){
+    fetchEditDataArket(editingProduct.product_url);
   }else{
     fetchEditData(pc,rg);
   }
@@ -425,7 +439,20 @@ function fetchEditData(pc,rg){
     document.getElementById('editContent').classList.remove('hd');
   });
 }
-
+function fetchEditDataArket(productUrl){
+  var fullUrl=productUrl;
+  if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.arket.com'+fullUrl;
+  api({action:'preview',url:fullUrl}).then(function(r){
+    document.getElementById('editLoading').style.display='none';
+    if(r.error){esst('Could not load product details','se');document.getElementById('editContent').classList.remove('hd');return;}
+    cacheProductData(editingProduct.product_code,editingProduct.region,r.product);
+    populateEditModal(r.product);
+  }).catch(function(){
+    document.getElementById('editLoading').style.display='none';
+    esst('Could not load product','se');
+    document.getElementById('editContent').classList.remove('hd');
+  });
+}
 function editRefreshFromApi(){
   if(!editingProduct)return;
   var btn=document.getElementById('eRefreshBtn');
@@ -437,7 +464,9 @@ function editRefreshFromApi(){
   document.getElementById('editLoading').style.display='block';
   document.getElementById('est').classList.add('hd');
 
-  var url=editingProduct.product_url||('https://www.uniqlo.com/'+(rg||'es')+'/en/products/'+pc+'/00');
+    var store=editingProduct.store||'uniqlo';
+  var url=editingProduct.product_url||(store==='arket'?'':('https://www.uniqlo.com/'+(rg||'es')+'/en/products/'+pc+'/00'));
+  if(!url){esst('Missing product URL','se');btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;document.getElementById('editContent').classList.remove('hd');return;}
   api({action:'preview',url:url}).then(function(r){
     btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
     document.getElementById('editLoading').style.display='none';
@@ -526,7 +555,9 @@ function saveEdit(){
     pc:editingProduct.product_code,
     cc:editColor,cn:getEditColorName(),sc:editSize,
     tp:document.getElementById('etp').value||'',
-    rg:editingProduct.region||'es'
+    rg:editingProduct.region||'es',
+    store:editingProduct.store||'uniqlo',
+    purl:editingProduct.product_url||''
   }).then(function(r){
     b.disabled=false;b.textContent='Save changes';
     if(r.error){esst(r.error,'se');return;}
@@ -570,14 +601,17 @@ function esst(msg,cls){var el=document.getElementById('est');el.textContent=msg;
 /* ====== ADD PRODUCT ====== */
 function prev(){
   var url=document.getElementById('aurl').value.trim();if(!url)return;
+  cStore=detectStoreJS(url);
+  cFullUrl=url;
   var b=document.getElementById('pbtn');b.disabled=true;b.textContent='Loading...';
   document.getElementById('ast').classList.add('hd');
   api({action:'preview',url:url}).then(function(r){
     b.disabled=false;b.textContent='Look up product';
     if(r.error){sst('ast',r.error,'se');return;}
-    cProd=r.product;cParsed=r.parsed;selColor=r.parsed.colorCode||'';selSize='';
+    cProd=r.product;cParsed=r.parsed;
+    cStore=r.store||detectStoreJS(url);
+    selColor=r.parsed.colorCode||'';selSize='';
 
-    // FIX #2: Cache product data on preview
     cacheProductData(r.parsed.productCode,r.parsed.region,r.product);
 
     document.getElementById('pimg').src=(r.product.mainImage||'')+'?width=200';
@@ -632,7 +666,7 @@ function addP(){
   if(!CID){sst('ast','Connect Telegram first','se');return;}
   if(!selSize){sst('ast','Pick a size','se');return;}
   var b=document.getElementById('abtn');b.disabled=true;b.textContent='Adding...';
-  api({action:'add',cid:CID,pc:cParsed.productCode,cc:selColor,cn:getSelColorName(),sc:selSize,tp:document.getElementById('tp').value||'',rg:cParsed.region}).then(function(r){
+  api({action:'add',cid:CID,pc:cParsed.productCode,cc:selColor,cn:getSelColorName(),sc:selSize,tp:document.getElementById('tp').value||'',rg:cParsed.region,store:cStore,purl:cFullUrl}).then(function(r){
     b.disabled=false;b.textContent='Start watching';
     if(r.error){sst('ast',r.error,'se');return;}
     sst('ast','Now watching '+r.name,'so');
