@@ -793,7 +793,134 @@ function getImageForColorLocal(product,colorCode){
 
 function esst(msg,cls){var el=document.getElementById('est');el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
 
-/* ====== ADD PRODUCT ====== */
+/* ====== UNIQLO CLIENT-SIDE API FETCH ====== */
+
+function parseUniqloUrlJS(url){
+  try{
+    var m=url.match(/products\/(E?\d{6}-\d{3})/i);
+    var pc=m?m[1]:null;
+    if(!pc){m=url.match(/(\d{6})/);if(m)pc='E'+m[1]+'-000';}
+    if(!pc)return null;
+    if(pc.indexOf('E')!==0)pc='E'+pc;
+    if(pc.indexOf('-')===-1)pc+='-000';
+    var cm=url.match(/colorDisplayCode[=](\w+)/i);
+    var rm=url.match(/uniqlo\.com\/(\w{2})\//);
+    return{productCode:pc,colorCode:cm?cm[1]:null,region:rm?rm[1].toLowerCase():'es',priceGroup:'00'};
+  }catch(e){return null;}
+}
+
+var UQ_LANGS={'es':'en','eu':'en','uk':'en','us':'en','de':'de','fr':'fr','jp':'ja','it':'it','nl':'en','be':'en','pt':'en','se':'en','dk':'en','pl':'en'};
+var UQ_CLIENTS={'es':'uq.es.web-spa','eu':'uq.eu.web-spa','de':'uq.de.web-spa','fr':'uq.fr.web-spa','uk':'uq.uk.web-spa','us':'uq.us.web-spa','jp':'uq.jp.web-spa','it':'uq.it.web-spa'};
+
+function fetchUniqloClientSide(url){
+  var parsed=parseUniqloUrlJS(url);
+  if(!parsed)return Promise.reject('Invalid URL');
+
+  var lang=UQ_LANGS[parsed.region]||'en';
+  var clientId=UQ_CLIENTS[parsed.region]||'uq.'+parsed.region+'.web-spa';
+  var cn=parsed.productCode.replace('E','').replace('-000','');
+
+  var apiUrl='https://www.uniqlo.com/'+parsed.region+'/api/commerce/v5/'+lang+'/products/'+parsed.productCode+
+    '/price-groups/00/l2s?withPrices=true&withStocks=true&includePreviousPrice=false&httpFailure=true';
+
+  // Try direct fetch first (might work if Uniqlo sets CORS), then proxy
+  return fetchUniqloApi(apiUrl).then(function(data){
+    return normaliseUniqloClient(data,parsed,cn);
+  });
+}
+
+function fetchUniqloApi(apiUrl){
+  // Try direct first
+  return fetch(apiUrl,{
+    headers:{'Accept':'application/json'}
+  }).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(data){
+    if(data.status==='ok')return data;
+    throw new Error('API status not ok');
+  }).catch(function(){
+    // Direct failed (CORS), try proxies in parallel
+    return raceUniqloProxies(apiUrl);
+  });
+}
+
+function raceUniqloProxies(apiUrl){
+  return new Promise(function(resolve,reject){
+    var done=false;
+    var failures=0;
+
+    ARKET_PROXIES.forEach(function(proxy){
+      fetch(proxy+encodeURIComponent(apiUrl)).then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        return r.json();
+      }).then(function(data){
+        if(!done&&data.status==='ok'){done=true;resolve(data);}
+        else if(!done)throw new Error('bad data');
+      }).catch(function(){
+        failures++;
+        if(failures>=ARKET_PROXIES.length&&!done){done=true;reject('All proxies failed');}
+      });
+    });
+
+    setTimeout(function(){if(!done){done=true;reject('Timeout');}},12000);
+  });
+}
+
+function normaliseUniqloClient(data,parsed,cn){
+  var l2s=data.result.l2s||[],prices=data.result.prices||{},stocks=data.result.stocks||{};
+  var colorMap={},sizeMap={};
+  var SZN_FULL={'001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL',
+    '028':'28','029':'29','030':'30','031':'31','032':'32','033':'33','034':'34','036':'36','038':'38','040':'40'};
+
+  for(var i=0;i<l2s.length;i++){
+    var it=l2s[i],cc=it.color.displayCode,sc=it.size.displayCode,id=it.l2Id;
+    if(!colorMap[cc])colorMap[cc]={code:cc,name:'',image:'https://image.uniqlo.com/UQ/ST3/eu/imagesgoods/'+cn+'/item/eugoods_'+cc+'_'+cn+'_3x4.jpg',sizes:[]};
+    if(!sizeMap[sc])sizeMap[sc]={code:sc,name:SZN_FULL[sc]||sc};
+    var pi=prices[id]||{},si=stocks[id]||{};
+    var base=(pi.base&&pi.base.value)||0,promo=(pi.promo&&pi.promo.value)||null;
+    colorMap[cc].sizes.push({
+      sizeCode:sc,sizeName:SZN_FULL[sc]||sc,
+      currentPrice:promo||base,basePrice:base,
+      onSale:promo!==null&&promo<base,
+      inStock:si.statusCode!=='STOCK_OUT',
+      currency:(pi.base&&pi.base.currency)?pi.base.currency.code:'EUR',
+      currencySymbol:(pi.base&&pi.base.currency)?pi.base.currency.symbol:'€'
+    });
+  }
+
+  var colors=Object.keys(colorMap).map(function(k){return colorMap[k];});
+  var sizes=Object.keys(sizeMap).map(function(k){return sizeMap[k];});
+  sizes.sort(function(a,b){return a.code.localeCompare(b.code);});
+
+  var all=[],hi=0;
+  Object.keys(prices).forEach(function(id){
+    var p=prices[id];
+    var c=(p.promo&&p.promo.value)?p.promo.value:(p.base?p.base.value:0);
+    if(c>0)all.push(c);
+    if(p.base&&p.base.value>hi)hi=p.base.value;
+  });
+  var lo=all.length>0?Math.min.apply(null,all):0;
+  var cur='EUR',sym='€';
+  if(colors.length>0&&colors[0].sizes.length>0){cur=colors[0].sizes[0].currency;sym=colors[0].sizes[0].currencySymbol;}
+
+  // Product name: we don't have it from the API, extract from URL or leave generic
+  var nameFromUrl=parsed.productCode.replace('E','').replace('-000','');
+  var cat='tops';
+
+  return{
+    productCode:parsed.productCode,name:'Product '+nameFromUrl,
+    image:colors.length>0?colors[0].image:'',category:cat,
+    currentPrice:lo,originalPrice:hi,onSale:lo<hi,
+    currency:cur,currencySymbol:sym,
+    colors:colors,sizes:sizes,region:parsed.region,
+    mainImage:colors.length>0?colors[0].image:'',
+    _needsName:true  // flag: backend should fill in the real name
+  };
+}
+
+/* ====== PREVIEW (updated) ====== */
+
 function prev(){
   var url=document.getElementById('aurl').value.trim();if(!url)return;
   cStore=detectStoreJS(url);
@@ -802,12 +929,72 @@ function prev(){
   document.getElementById('ast').classList.add('hd');
 
   if(cStore==='arket'){
-    // Client-side fetch for ARKET
     prevArketClient(url,b);
     return;
   }
 
-  // Uniqlo: server-side
+  // Uniqlo: try client-side first, fall back to backend
+  var backendStarted=false;
+  var clientDone=false;
+
+  // Start client-side fetch
+  fetchUniqloClientSide(url).then(function(product){
+    if(clientDone)return;
+    clientDone=true;
+    b.disabled=false;b.textContent='Look up product';
+    cProd=product;
+    cParsed=parseUniqloUrlJS(url);
+    cStore='uniqlo';
+    showPreviewProduct(product,cParsed);
+
+    // Fire backend in background to get real product name
+    api({action:'preview',url:url}).then(function(r){
+      if(r.ok&&r.product){
+        cProd.name=r.product.name;
+        cProd._needsName=false;
+        cParsed=r.parsed;
+        document.getElementById('pnm').textContent=r.product.name;
+        cacheProductData(r.parsed.productCode,r.parsed.region,cProd);
+        // Update color names
+        if(r.product.colors){
+          for(var i=0;i<r.product.colors.length;i++){
+            var rc=r.product.colors[i];
+            for(var j=0;j<cProd.colors.length;j++){
+              if(cProd.colors[j].code===rc.code&&rc.name){cProd.colors[j].name=rc.name;}
+            }
+          }
+          // Refresh color buttons with names
+          if(cProd.colors.length>1){
+            var ch='';
+            for(var i=0;i<cProd.colors.length;i++){
+              var c=cProd.colors[i];
+              ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';
+            }
+            document.getElementById('cols').innerHTML=ch;
+          }
+        }
+      }
+    }).catch(function(){});
+  }).catch(function(){
+    if(clientDone)return;
+    clientDone=true;
+    // Client-side failed, use backend
+    if(!backendStarted){
+      backendStarted=true;
+      prevBackend(url,b);
+    }
+  });
+
+  // Safety: if client takes too long, start backend after 4s
+  setTimeout(function(){
+    if(!clientDone&&!backendStarted){
+      backendStarted=true;
+      prevBackend(url,b);
+    }
+  },4000);
+}
+
+function prevBackend(url,b){
   api({action:'preview',url:url}).then(function(r){
     b.disabled=false;b.textContent='Look up product';
     if(r.error){sst('ast',r.error,'se');return;}
