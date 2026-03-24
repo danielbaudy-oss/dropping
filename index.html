@@ -89,6 +89,9 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 
 .loader{display:inline-block;width:16px;height:16px;border:2px solid #ddd;border-top-color:#333;border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+.refreshbtn{background:none;border:1px solid #d1d5db;color:#888;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:auto}
+.refreshbtn:hover{color:#FF0000;border-color:#FF0000}
 </style>
 </head>
 <body>
@@ -113,9 +116,9 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <h2>Add product</h2>
       <button class="modal-close" onclick="closeAdd()">&#10005;</button>
     </div>
-   <label>Product URL</label>
-<div style="font-size:11px;color:#888;margin-bottom:6px">Copy a product link from <a href="https://www.uniqlo.com" target="_blank" style="color:#FF0000">uniqlo.com</a></div>
-<input type="text" id="aurl" placeholder="https://www.uniqlo.com/...">
+    <label>Product URL</label>
+    <div style="font-size:11px;color:#888;margin-bottom:6px">Copy a product link from <a href="https://www.uniqlo.com" target="_blank" style="color:#FF0000">uniqlo.com</a></div>
+    <input type="text" id="aurl" placeholder="https://www.uniqlo.com/...">
     <button class="btn bblk" id="pbtn" onclick="prev()">Look up product</button>
     <div id="psec" class="hd" style="margin-top:16px">
       <div class="pc">
@@ -140,7 +143,10 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
   <div class="modal">
     <div class="modal-hdr">
       <h2>Edit product</h2>
-      <button class="modal-close" onclick="closeEdit()">&#10005;</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="refreshbtn" id="eRefreshBtn" onclick="editRefreshFromApi()">&#8635; Refresh stock</button>
+        <button class="modal-close" onclick="closeEdit()">&#10005;</button>
+      </div>
     </div>
     <div id="editLoading" style="text-align:center;padding:30px"><div class="loader"></div></div>
     <div id="editContent" class="hd">
@@ -195,6 +201,58 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
       <div id="tst" class="hd"></div>
     </div>
+
+    <div class="sec">
+      <h2>Default sizes</h2>
+      <label>Tops (T-shirts, shirts, jackets)</label>
+      <select id="sts">
+        <option value="">Not set</option>
+        <option value="XXS">XXS</option>
+        <option value="XS">XS</option>
+        <option value="S">S</option>
+        <option value="M">M</option>
+        <option value="L">L</option>
+        <option value="XL">XL</option>
+        <option value="XXL">XXL</option>
+        <option value="3XL">3XL</option>
+      </select>
+      <label>Bottoms (Pants, jeans, shorts)</label>
+      <select id="sb">
+        <option value="">Not set</option>
+        <option value="28">28</option>
+        <option value="29">29</option>
+        <option value="30">30</option>
+        <option value="31">31</option>
+        <option value="32">32</option>
+        <option value="33">33</option>
+        <option value="34">34</option>
+        <option value="36">36</option>
+        <option value="38">38</option>
+        <option value="40">40</option>
+        <option value="XS">XS</option>
+        <option value="S">S</option>
+        <option value="M">M</option>
+        <option value="L">L</option>
+        <option value="XL">XL</option>
+      </select>
+      <label>Region</label>
+      <select id="rg">
+        <option value="es">Spain</option>
+        <option value="uk">United Kingdom</option>
+        <option value="us">United States</option>
+        <option value="de">Germany</option>
+        <option value="fr">France</option>
+        <option value="it">Italy</option>
+        <option value="nl">Netherlands</option>
+        <option value="be">Belgium</option>
+        <option value="pt">Portugal</option>
+        <option value="se">Sweden</option>
+        <option value="dk">Denmark</option>
+        <option value="pl">Poland</option>
+      </select>
+      <button class="btn bblk" id="savbtn" onclick="saveSet()">Save</button>
+      <div id="sst" class="hd"></div>
+    </div>
   </div>
 </div>
 
@@ -206,7 +264,6 @@ var cachedProducts=null;
 var settingsLoaded=false;
 var pendingRemoveId=null;
 
-// Edit state
 var editingProduct=null;
 var editProd=null;
 var editColor='';
@@ -215,9 +272,35 @@ var editSize='';
 var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL','001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','28':'28','29':'29','30':'30','31':'31','32':'32','33':'33','34':'34','36':'36'};
 function szName(c){return SZN[c]||c||'';}
 
+/* ====== FIX #1: XSS — escape all dynamic text ====== */
+function esc(s){
+  if(!s)return '';
+  var d=document.createElement('div');
+  d.textContent=String(s);
+  return d.innerHTML;
+}
+
 function api(params){
   var url=API+'?'+Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
   return fetch(url).then(function(r){return r.json();});
+}
+
+/* ====== FIX #2: Product data cache ====== */
+function cacheProductData(productCode,region,data){
+  try{localStorage.setItem('uq_pdata_'+productCode+'_'+region,JSON.stringify({ts:Date.now(),data:data}));}catch(e){}
+}
+function getCachedProductData(productCode,region){
+  try{
+    var raw=localStorage.getItem('uq_pdata_'+productCode+'_'+region);
+    if(!raw)return null;
+    var obj=JSON.parse(raw);
+    // Cache valid for 1 hour
+    if(Date.now()-obj.ts>3600000)return null;
+    return obj.data;
+  }catch(e){return null;}
+}
+function clearProductCache(productCode,region){
+  try{localStorage.removeItem('uq_pdata_'+productCode+'_'+region);}catch(e){}
 }
 
 /* ====== NAVIGATION ====== */
@@ -252,6 +335,7 @@ function loadP(force){
   });
 }
 
+/* ====== FIX #1 continued: all innerHTML uses esc() ====== */
 function renderP(ps){
   if(!ps||!Array.isArray(ps)||ps.length===0){
     document.getElementById('hb').innerHTML='';
@@ -259,11 +343,22 @@ function renderP(ps){
     return;
   }
   var h='';
-  for(var i=0;i<ps.length;i++){var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0,s=p.currency==='USD'?'$':'€';
-    h+='<div class="card" id="c-'+p.id+'" onclick="openEdit(\''+p.id+'\')"><div class="ci"><img class="cimg" src="'+(p.image_url||'')+'?width=200" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'"><div style="flex:1;min-width:0"><div class="cn">'+(p.name||'?')+'</div><div class="cm">'+(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+szName(String(p.size_code)):'')+'</div><div class="cp"><span class="pn'+(d?' pd':'')+'">'+s+l.toFixed(2)+'</span>';
-    if(d)h+='<span class="po">'+s+n.toFixed(2)+'</span><span class="bg bgr">-'+pc+'%</span>';
-    h+='</div>';if(p.target_price)h+='<div style="margin-top:3px"><span class="bg bgy">Target: '+s+parseFloat(p.target_price).toFixed(2)+'</span></div>';
-    h+='<div class="cm">Lowest: '+s+w.toFixed(2)+'</div></div></div><div class="cb"><a class="cl" href="'+(p.product_url||'#')+'" target="_blank" onclick="event.stopPropagation()">View on Uniqlo</a><button class="bs" onclick="event.stopPropagation();remP(\''+p.id+'\')">Remove</button></div></div>';
+  for(var i=0;i<ps.length;i++){
+    var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0,s=p.currency==='USD'?'$':'€';
+    h+='<div class="card" id="c-'+esc(p.id)+'" onclick="openEdit(\''+esc(p.id)+'\')">';
+    h+='<div class="ci">';
+    h+='<img class="cimg" src="'+esc(p.image_url||'')+'?width=200" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
+    h+='<div style="flex:1;min-width:0">';
+    h+='<div class="cn">'+esc(p.name||'?')+'</div>';
+    h+='<div class="cm">'+esc(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+esc(szName(String(p.size_code))):'')+'</div>';
+    h+='<div class="cp"><span class="pn'+(d?' pd':'')+'">'+esc(s+l.toFixed(2))+'</span>';
+    if(d)h+='<span class="po">'+esc(s+n.toFixed(2))+'</span><span class="bg bgr">-'+pc+'%</span>';
+    h+='</div>';
+    if(p.target_price)h+='<div style="margin-top:3px"><span class="bg bgy">Target: '+esc(s+parseFloat(p.target_price).toFixed(2))+'</span></div>';
+    h+='<div class="cm">Lowest: '+esc(s+w.toFixed(2))+'</div>';
+    h+='</div></div>';
+    h+='<div class="cb"><a class="cl" href="'+esc(p.product_url||'#')+'" target="_blank" onclick="event.stopPropagation()">View on Uniqlo</a>';
+    h+='<button class="bs" onclick="event.stopPropagation();remP(\''+esc(p.id)+'\')">Remove</button></div></div>';
   }
   document.getElementById('hb').innerHTML='';
   document.getElementById('hc').innerHTML=h;
@@ -281,16 +376,17 @@ function confirmYes(){
   document.getElementById('confirmModal').classList.remove('on');
   if(!pendingRemoveId)return;
   var id=pendingRemoveId;pendingRemoveId=null;
-  document.getElementById('c-'+id).style.opacity='.3';
+  var el=document.getElementById('c-'+id);
+  if(el)el.style.opacity='.3';
   api({action:'remove',cid:CID,pid:id}).then(function(){
-    document.getElementById('c-'+id).style.display='none';
+    if(el)el.style.display='none';
     if(cachedProducts){cachedProducts=cachedProducts.filter(function(p){return p.id!==id;});localStorage.setItem('uq_products',JSON.stringify(cachedProducts));}
   });
 }
 function confirmNo(){pendingRemoveId=null;document.getElementById('confirmModal').classList.remove('on');}
 function closeConfirmBg(e){if(e.target===document.getElementById('confirmModal'))confirmNo();}
 
-/* ====== EDIT PRODUCT ====== */
+/* ====== EDIT PRODUCT — uses cache ====== */
 function openEdit(id){
   if(!cachedProducts)return;
   editingProduct=null;
@@ -303,46 +399,88 @@ function openEdit(id){
   document.getElementById('est').classList.add('hd');
   document.getElementById('editModal').classList.add('on');
 
-  // Fetch fresh product data for colors/sizes
-  api({action:'preview',url:editingProduct.product_url||('https://www.uniqlo.com/'+(editingProduct.region||'es')+'/en/products/'+editingProduct.product_code+'/00')}).then(function(r){
+  // FIX #2: Check cache first
+  var pc=editingProduct.product_code;
+  var rg=editingProduct.region||'es';
+  var cached=getCachedProductData(pc,rg);
+
+  if(cached){
+    populateEditModal(cached);
+  }else{
+    fetchEditData(pc,rg);
+  }
+}
+
+function fetchEditData(pc,rg){
+  var url=editingProduct.product_url||('https://www.uniqlo.com/'+(rg||'es')+'/en/products/'+pc+'/00');
+  api({action:'preview',url:url}).then(function(r){
     document.getElementById('editLoading').style.display='none';
     if(r.error){esst('Could not load product details','se');document.getElementById('editContent').classList.remove('hd');return;}
-    editProd=r.product;
-
-    document.getElementById('enm').textContent=editProd.name;
-    document.getElementById('epr').textContent=editProd.currencySymbol+editProd.currentPrice.toFixed(2);
-    document.getElementById('esl').textContent=editProd.onSale?'Sale — was '+editProd.currencySymbol+editProd.originalPrice.toFixed(2):'';
-
-    // Set image for current color
-    var img=editingProduct.image_url||editProd.mainImage||'';
-    document.getElementById('eimg').src=img+'?width=200';
-
-    // Colors
-    if(editProd.colors.length>1){
-      var ch='';
-      for(var i=0;i<editProd.colors.length;i++){
-        var c=editProd.colors[i];
-        ch+='<button class="ob'+(c.code===editColor?' on':'')+'" onclick="epckC(\''+c.code+'\',this)">'+(c.name||c.code)+'</button>';
-      }
-      document.getElementById('ecols').innerHTML=ch;
-      document.getElementById('ecsec').classList.remove('hd');
-    }else{
-      document.getElementById('ecsec').classList.add('hd');
-      if(editProd.colors.length===1)editColor=editProd.colors[0].code;
-    }
-
-    // Sizes
-    eRefreshSizes();
-
-    // Target price
-    document.getElementById('etp').value=editingProduct.target_price||'';
-
-    document.getElementById('editContent').classList.remove('hd');
+    // Cache it
+    cacheProductData(pc,rg,r.product);
+    populateEditModal(r.product);
   }).catch(function(){
     document.getElementById('editLoading').style.display='none';
     esst('Could not load product','se');
     document.getElementById('editContent').classList.remove('hd');
   });
+}
+
+function editRefreshFromApi(){
+  if(!editingProduct)return;
+  var btn=document.getElementById('eRefreshBtn');
+  btn.textContent='Refreshing...';btn.disabled=true;
+  var pc=editingProduct.product_code;
+  var rg=editingProduct.region||'es';
+  clearProductCache(pc,rg);
+  document.getElementById('editContent').classList.add('hd');
+  document.getElementById('editLoading').style.display='block';
+  document.getElementById('est').classList.add('hd');
+
+  var url=editingProduct.product_url||('https://www.uniqlo.com/'+(rg||'es')+'/en/products/'+pc+'/00');
+  api({action:'preview',url:url}).then(function(r){
+    btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
+    document.getElementById('editLoading').style.display='none';
+    if(r.error){esst('Could not refresh','se');document.getElementById('editContent').classList.remove('hd');return;}
+    cacheProductData(pc,rg,r.product);
+    populateEditModal(r.product);
+    esst('Stock refreshed','so');
+  }).catch(function(){
+    btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
+    document.getElementById('editLoading').style.display='none';
+    esst('Refresh failed','se');
+    document.getElementById('editContent').classList.remove('hd');
+  });
+}
+
+function populateEditModal(product){
+  editProd=product;
+  document.getElementById('editLoading').style.display='none';
+
+  document.getElementById('enm').textContent=product.name;
+  document.getElementById('epr').textContent=product.currencySymbol+product.currentPrice.toFixed(2);
+  document.getElementById('esl').textContent=product.onSale?'Sale — was '+product.currencySymbol+product.originalPrice.toFixed(2):'';
+
+  var img=editingProduct.image_url||product.mainImage||'';
+  document.getElementById('eimg').src=img+'?width=200';
+
+  // Colors
+  if(product.colors.length>1){
+    var ch='';
+    for(var i=0;i<product.colors.length;i++){
+      var c=product.colors[i];
+      ch+='<button class="ob'+(c.code===editColor?' on':'')+'" onclick="epckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';
+    }
+    document.getElementById('ecols').innerHTML=ch;
+    document.getElementById('ecsec').classList.remove('hd');
+  }else{
+    document.getElementById('ecsec').classList.add('hd');
+    if(product.colors.length===1)editColor=product.colors[0].code;
+  }
+
+  eRefreshSizes();
+  document.getElementById('etp').value=editingProduct.target_price||'';
+  document.getElementById('editContent').classList.remove('hd');
 }
 
 function closeEdit(){document.getElementById('editModal').classList.remove('on');editingProduct=null;editProd=null;}
@@ -366,8 +504,8 @@ function eRefreshSizes(){
   for(var i=0;i<editProd.sizes.length;i++){
     var sz=editProd.sizes[i];var ok=avail[sz.code];
     var isSelected=sz.code===editSize;
-    if(!ok){if(isSelected)editSize='';sh+='<button class="ob" disabled>'+sz.name+'</button>';}
-    else sh+='<button class="ob'+(isSelected?' on':'')+'" onclick="epckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
+    if(!ok){if(isSelected)editSize='';sh+='<button class="ob" disabled>'+esc(sz.name)+'</button>';}
+    else sh+='<button class="ob'+(isSelected?' on':'')+'" onclick="epckS(\''+esc(sz.code)+'\',this)">'+esc(sz.name)+'</button>';
   }
   document.getElementById('eszs').innerHTML=sh;
 }
@@ -395,7 +533,6 @@ function saveEdit(){
     b.textContent='Saved';b.classList.add('btn-saved');
     esst('Changes saved','so');
 
-    // Update cache
     if(cachedProducts){
       for(var i=0;i<cachedProducts.length;i++){
         if(cachedProducts[i].id===editingProduct.id){
@@ -439,12 +576,26 @@ function prev(){
     b.disabled=false;b.textContent='Look up product';
     if(r.error){sst('ast',r.error,'se');return;}
     cProd=r.product;cParsed=r.parsed;selColor=r.parsed.colorCode||'';selSize='';
+
+    // FIX #2: Cache product data on preview
+    cacheProductData(r.parsed.productCode,r.parsed.region,r.product);
+
     document.getElementById('pimg').src=(r.product.mainImage||'')+'?width=200';
     document.getElementById('pnm').textContent=r.product.name;
     document.getElementById('ppr').textContent=r.product.currencySymbol+r.product.currentPrice.toFixed(2);
     document.getElementById('psl').textContent=r.product.onSale?'Sale — was '+r.product.currencySymbol+r.product.originalPrice.toFixed(2):'';
-    if(r.product.colors.length>1){var ch='';for(var i=0;i<r.product.colors.length;i++){var c=r.product.colors[i];ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+c.code+'\',this)">'+(c.name||c.code)+'</button>';}document.getElementById('cols').innerHTML=ch;document.getElementById('csec').classList.remove('hd');}
-    else{document.getElementById('csec').classList.add('hd');if(r.product.colors.length===1)selColor=r.product.colors[0].code;}
+    if(r.product.colors.length>1){
+      var ch='';
+      for(var i=0;i<r.product.colors.length;i++){
+        var c=r.product.colors[i];
+        ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';
+      }
+      document.getElementById('cols').innerHTML=ch;
+      document.getElementById('csec').classList.remove('hd');
+    }else{
+      document.getElementById('csec').classList.add('hd');
+      if(r.product.colors.length===1)selColor=r.product.colors[0].code;
+    }
     refreshSizes();
     document.getElementById('psec').classList.remove('hd');
   }).catch(function(e){b.disabled=false;b.textContent='Look up product';sst('ast','Failed to load product','se');});
@@ -455,8 +606,8 @@ function refreshSizes(){
   var sh='',avail=getAvailSizes(cProd,selColor);
   for(var i=0;i<cProd.sizes.length;i++){var sz=cProd.sizes[i];var ok=avail[sz.code];
     var isSel=sz.code===selSize;
-    if(!ok){if(isSel)selSize='';sh+='<button class="ob" disabled>'+sz.name+'</button>';}
-    else sh+='<button class="ob'+(isSel?' on':'')+'" onclick="pckS(\''+sz.code+'\',this)">'+sz.name+'</button>';
+    if(!ok){if(isSel)selSize='';sh+='<button class="ob" disabled>'+esc(sz.name)+'</button>';}
+    else sh+='<button class="ob'+(isSel?' on':'')+'" onclick="pckS(\''+esc(sz.code)+'\',this)">'+esc(sz.name)+'</button>';
   }
   document.getElementById('szs').innerHTML=sh;
 }
