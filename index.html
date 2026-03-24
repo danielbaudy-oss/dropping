@@ -222,7 +222,12 @@ function szName(c){return SZN[c]||c||'';}
 function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML.replace(/'/g,'&#39;');}
 function imgUrl(src,width){if(!src)return '';return src+(src.indexOf('?')===-1?'?':'&')+'width='+width;}
 function detectStoreJS(url){if(url&&url.indexOf('arket.com')!==-1)return 'arket';return 'uniqlo';}
-
+function detectStoreFromProduct(p){
+  if(p.store&&p.store!=='')return p.store;
+  if(p.product_url&&p.product_url.indexOf('arket.com')!==-1)return 'arket';
+  if(p.region&&p.region.indexOf('-')!==-1)return 'arket';
+  return 'uniqlo';
+}
 function api(params){
   var url=API+'?'+Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
   return fetch(url).then(function(r){return r.json();});
@@ -543,7 +548,7 @@ function renderP(ps){
   var h='';
   for(var i=0;i<ps.length;i++){
     var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0;
-    var store=p.store||'uniqlo';
+    var store=detectStoreFromProduct(p);
     var s=CSYM[p.currency]||'€';
     var storeName=store==='arket'?'ARKET':'Uniqlo';
     var sizeDisplay=store==='arket'?esc(p.size_code||''):esc(szName(String(p.size_code)));
@@ -601,7 +606,7 @@ function openEdit(id){
   editingProduct=null;
   for(var i=0;i<cachedProducts.length;i++){if(cachedProducts[i].id===id){editingProduct=cachedProducts[i];break;}}
   if(!editingProduct)return;
-  var store=editingProduct.store||'uniqlo';
+  var store=detectStoreFromProduct(editingProduct);
   editProd=null;editColor=editingProduct.color_code||'';editSize=String(editingProduct.size_code||'');
   document.getElementById('editContent').classList.add('hd');
   document.getElementById('editLoading').style.display='block';
@@ -755,15 +760,26 @@ function saveEdit(){
   if(!editingProduct)return;
   if(!editSize){esst('Pick a size','se');return;}
   var b=document.getElementById('ebtn');b.disabled=true;b.textContent='Saving...';
-  api({
+
+  var store=detectStoreFromProduct(editingProduct);
+
+  var params={
     action:'update',cid:CID,pid:editingProduct.id,
     pc:editingProduct.product_code,
     cc:editColor,cn:getEditColorName(),sc:editSize,
     tp:document.getElementById('etp').value||'',
     rg:editingProduct.region||'es',
-    store:editingProduct.store||'uniqlo',
+    store:store,
     purl:editingProduct.product_url||''
-  }).then(function(r){
+  };
+
+  // For ARKET: send image from client so backend doesn't re-fetch
+  if(store==='arket'&&editProd){
+    var img=getImageForColorLocal(editProd,editColor)||editProd.mainImage||'';
+    if(img)params.pimg=img;
+  }
+
+  api(params).then(function(r){
     b.disabled=false;b.textContent='Save changes';
     if(r.error){esst(r.error,'se');return;}
     b.textContent='Saved';b.classList.add('btn-saved');
@@ -775,6 +791,7 @@ function saveEdit(){
           cachedProducts[i].color_name=getEditColorName();
           cachedProducts[i].size_code=editSize;
           cachedProducts[i].target_price=document.getElementById('etp').value||'';
+          cachedProducts[i].store=store;
           if(editProd){var img=getImageForColorLocal(editProd,editColor);if(img)cachedProducts[i].image_url=img;}
           break;
         }
