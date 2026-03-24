@@ -1089,20 +1089,47 @@ function addP(){
   if(!selSize){sst('ast','Pick a size','se');return;}
   var b=document.getElementById('abtn');b.disabled=true;b.textContent='Adding...';
 
-  // For ARKET, if cParsed came from client-side, build it from local parsed data
   var parsedToUse=cParsed;
   if(!parsedToUse&&cStore==='arket'){
     parsedToUse=parseArketUrlJS(cFullUrl);
   }
   if(!parsedToUse){sst('ast','Missing product data','se');b.disabled=false;b.textContent='Start watching';return;}
 
-  api({action:'add',cid:CID,pc:parsedToUse.productCode,cc:selColor,cn:getSelColorName(),sc:selSize,tp:document.getElementById('tp').value||'',rg:parsedToUse.region,store:cStore,purl:cFullUrl}).then(function(r){
+  var params={
+    action:'add',cid:CID,
+    pc:parsedToUse.productCode,
+    cc:selColor,
+    cn:getSelColorName(),
+    sc:selSize,
+    tp:document.getElementById('tp').value||'',
+    rg:parsedToUse.region,
+    store:cStore,
+    purl:cFullUrl
+  };
+
+  // For ARKET: send product data so backend doesn't need to re-fetch
+  if(cStore==='arket'&&cProd){
+    params.pname=cProd.name||'';
+    params.pprice=cProd.currentPrice||0;
+    params.pcur=cProd.currency||'GBP';
+    params.pimg=getSelColorImage()||cProd.mainImage||'';
+  }
+
+  api(params).then(function(r){
     b.disabled=false;b.textContent='Start watching';
     if(r.error){sst('ast',r.error,'se');return;}
     sst('ast','Now watching '+r.name,'so');
     cachedProducts=null;localStorage.removeItem('uq_products');
     setTimeout(function(){closeAdd();loadP(true);},1200);
   }).catch(function(e){b.disabled=false;b.textContent='Start watching';sst('ast','Failed to add','se');});
+}
+
+function getSelColorImage(){
+  if(!cProd||!cProd.colors||!selColor)return '';
+  for(var i=0;i<cProd.colors.length;i++){
+    if(cProd.colors[i].code===selColor&&cProd.colors[i].image)return cProd.colors[i].image;
+  }
+  return '';
 }
 
 /* ====== SETTINGS ====== */
