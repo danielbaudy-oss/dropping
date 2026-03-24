@@ -122,7 +122,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
     <button class="btn bblk" id="pbtn" onclick="prev()">Look up product</button>
     <div id="psec" class="hd" style="margin-top:16px">
       <div class="pc">
-        <img id="pimg" class="pi" referrerpolicy="no-referrer">
+        <img id="pimg" class="pi" referrerpolicy="no-referrer" alt="Product image">
         <div>
           <div id="pnm" class="ppn"></div>
           <div id="ppr" class="ppp"></div>
@@ -151,7 +151,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
     <div id="editLoading" style="text-align:center;padding:30px"><div class="loader"></div></div>
     <div id="editContent" class="hd">
       <div class="pc">
-        <img id="eimg" class="pi" referrerpolicy="no-referrer">
+        <img id="eimg" class="pi" referrerpolicy="no-referrer" alt="Product image">
         <div>
           <div id="enm" class="ppn"></div>
           <div id="epr" class="ppp"></div>
@@ -162,7 +162,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <div style="margin-top:8px"><label>Size</label><div id="eszs" class="og"></div></div>
       <div style="margin-top:8px"><label>Target price (optional)</label><input type="number" id="etp" step="0.01" placeholder="Notify me below this price"></div>
       <button class="btn bblk" id="ebtn" onclick="saveEdit()">Save changes</button>
-      <button class="btn" style="background:#fff;color:#FF0000;border:1px solid #fecaca;margin-top:8px" onclick="closeEdit();remP(editingProduct.id)">Remove product</button>
+      <button class="btn" style="background:#fff;color:#FF0000;border:1px solid #fecaca;margin-top:8px" onclick="editRemove()">Remove product</button>
     </div>
     <div id="est" class="hd"></div>
   </div>
@@ -271,18 +271,24 @@ var editSize='';
 var cStore='uniqlo';
 var cFullUrl='';
 
-  
 var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL','001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','28':'28','29':'29','30':'30','31':'31','32':'32','33':'33','34':'34','36':'36'};
+var CSYM={GBP:'£',USD:'$',CHF:'CHF',SEK:'kr',DKK:'kr',NOK:'kr',PLN:'zł',EUR:'€'};
+
 function szName(c){return SZN[c]||c||'';}
 
-/* ====== FIX #1: XSS — escape all dynamic text ====== */
 function esc(s){
   if(!s)return '';
   var d=document.createElement('div');
   d.textContent=String(s);
-  return d.innerHTML;
+  return d.innerHTML.replace(/'/g,'&#39;');
 }
-  function detectStoreJS(url){
+
+function imgUrl(src,width){
+  if(!src)return '';
+  return src+(src.indexOf('?')===-1?'?':'&')+'width='+width;
+}
+
+function detectStoreJS(url){
   if(url&&url.indexOf('arket.com')!==-1)return 'arket';
   return 'uniqlo';
 }
@@ -292,7 +298,6 @@ function api(params){
   return fetch(url).then(function(r){return r.json();});
 }
 
-/* ====== FIX #2: Product data cache ====== */
 function cacheProductData(productCode,region,data){
   try{localStorage.setItem('uq_pdata_'+productCode+'_'+region,JSON.stringify({ts:Date.now(),data:data}));}catch(e){}
 }
@@ -301,7 +306,6 @@ function getCachedProductData(productCode,region){
     var raw=localStorage.getItem('uq_pdata_'+productCode+'_'+region);
     if(!raw)return null;
     var obj=JSON.parse(raw);
-    // Cache valid for 1 hour
     if(Date.now()-obj.ts>3600000)return null;
     return obj.data;
   }catch(e){return null;}
@@ -326,7 +330,14 @@ function loadP(force){
   }
   var localCache=localStorage.getItem('uq_products');
   if(localCache){
-    try{var cached=JSON.parse(localCache);cachedProducts=cached;renderP(cached);}catch(e){}
+    try{
+      var cached=JSON.parse(localCache);
+      cachedProducts=cached;
+      renderP(cached);
+    }catch(e){
+      localStorage.removeItem('uq_products');
+      document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';
+    }
   }else if(!force&&cachedProducts!==null){
     renderP(cachedProducts);return;
   }else{
@@ -342,7 +353,6 @@ function loadP(force){
   });
 }
 
-/* ====== FIX #1 continued: all innerHTML uses esc() ====== */
 function renderP(ps){
   if(!ps||!Array.isArray(ps)||ps.length===0){
     document.getElementById('hb').innerHTML='';
@@ -353,13 +363,13 @@ function renderP(ps){
   for(var i=0;i<ps.length;i++){
     var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0;
     var store=p.store||'uniqlo';
-    var s=p.currency==='GBP'?'£':p.currency==='USD'?'$':p.currency==='CHF'?'CHF':(p.currency==='SEK'||p.currency==='DKK'||p.currency==='NOK')?'kr':p.currency==='PLN'?'zł':'€';
+    var s=CSYM[p.currency]||'€';
     var storeName=store==='arket'?'ARKET':'Uniqlo';
     var sizeDisplay=store==='arket'?esc(p.size_code||''):esc(szName(String(p.size_code)));
 
     h+='<div class="card" id="c-'+esc(p.id)+'" onclick="openEdit(\''+esc(p.id)+'\')">';
     h+='<div class="ci">';
-    h+='<img class="cimg" src="'+esc(p.image_url||'')+'" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
+    h+='<img class="cimg" src="'+esc(p.image_url||'')+'" alt="'+esc(p.name||'Product')+'" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
     h+='<div style="flex:1;min-width:0">';
     h+='<div class="cn">'+esc(p.name||'?')+'</div>';
     h+='<div class="cm">'+esc(p.color_name||p.color_code||'')+' '+(p.size_code?'· '+sizeDisplay:'')+'</div>';
@@ -398,7 +408,15 @@ function confirmYes(){
 function confirmNo(){pendingRemoveId=null;document.getElementById('confirmModal').classList.remove('on');}
 function closeConfirmBg(e){if(e.target===document.getElementById('confirmModal'))confirmNo();}
 
-/* ====== EDIT PRODUCT — uses cache ====== */
+/* ====== EDIT REMOVE — capture id before closeEdit nullifies editingProduct ====== */
+function editRemove(){
+  if(!editingProduct)return;
+  var eid=editingProduct.id;
+  closeEdit();
+  remP(eid);
+}
+
+/* ====== EDIT PRODUCT ====== */
 function openEdit(id){
   if(!cachedProducts)return;
   editingProduct=null;
@@ -430,7 +448,6 @@ function fetchEditData(pc,rg){
   api({action:'preview',url:url}).then(function(r){
     document.getElementById('editLoading').style.display='none';
     if(r.error){esst('Could not load product details','se');document.getElementById('editContent').classList.remove('hd');return;}
-    // Cache it
     cacheProductData(pc,rg,r.product);
     populateEditModal(r.product);
   }).catch(function(){
@@ -464,7 +481,7 @@ function editRefreshFromApi(){
   document.getElementById('editLoading').style.display='block';
   document.getElementById('est').classList.add('hd');
 
-    var store=editingProduct.store||'uniqlo';
+  var store=editingProduct.store||'uniqlo';
   var url=editingProduct.product_url||(store==='arket'?'':('https://www.uniqlo.com/'+(rg||'es')+'/en/products/'+pc+'/00'));
   if(!url){esst('Missing product URL','se');btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;document.getElementById('editContent').classList.remove('hd');return;}
   api({action:'preview',url:url}).then(function(r){
@@ -491,9 +508,8 @@ function populateEditModal(product){
   document.getElementById('esl').textContent=product.onSale?'Sale — was '+product.currencySymbol+product.originalPrice.toFixed(2):'';
 
   var img=editingProduct.image_url||product.mainImage||'';
-  document.getElementById('eimg').src=img+'?width=200';
+  document.getElementById('eimg').src=imgUrl(img,200);
 
-  // Colors
   if(product.colors.length>1){
     var ch='';
     for(var i=0;i<product.colors.length;i++){
@@ -518,7 +534,7 @@ function closeEditBg(e){if(e.target===document.getElementById('editModal'))close
 function epckC(c,el){
   editColor=c;
   var bs=document.querySelectorAll('#ecols .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
-  if(editProd){for(var i=0;i<editProd.colors.length;i++)if(editProd.colors[i].code===c&&editProd.colors[i].image){document.getElementById('eimg').src=editProd.colors[i].image+'?width=200';break;}}
+  if(editProd){for(var i=0;i<editProd.colors.length;i++)if(editProd.colors[i].code===c&&editProd.colors[i].image){document.getElementById('eimg').src=imgUrl(editProd.colors[i].image,200);break;}}
   eRefreshSizes();
 }
 
@@ -614,7 +630,7 @@ function prev(){
 
     cacheProductData(r.parsed.productCode,r.parsed.region,r.product);
 
-    document.getElementById('pimg').src=(r.product.mainImage||'')+'?width=200';
+    document.getElementById('pimg').src=imgUrl(r.product.mainImage||'',200);
     document.getElementById('pnm').textContent=r.product.name;
     document.getElementById('ppr').textContent=r.product.currencySymbol+r.product.currentPrice.toFixed(2);
     document.getElementById('psl').textContent=r.product.onSale?'Sale — was '+r.product.currencySymbol+r.product.originalPrice.toFixed(2):'';
@@ -656,7 +672,7 @@ function getAvailSizes(product,colorCode){
 function pckC(c,el){
   selColor=c;
   var bs=document.querySelectorAll('#cols .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');
-  if(cProd){for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===c&&cProd.colors[i].image){document.getElementById('pimg').src=cProd.colors[i].image+'?width=200';break;}}
+  if(cProd){for(var i=0;i<cProd.colors.length;i++)if(cProd.colors[i].code===c&&cProd.colors[i].image){document.getElementById('pimg').src=imgUrl(cProd.colors[i].image,200);break;}}
   refreshSizes();
 }
 function pckS(c,el){selSize=c;var bs=document.querySelectorAll('#szs .ob');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');el.classList.add('on');}
@@ -677,11 +693,13 @@ function addP(){
 
 /* ====== SETTINGS ====== */
 function testTg(){
-  var c=document.getElementById('cid').value.trim();if(!c){sst('tst','Enter your Chat ID','se');return;}
+  var c=document.getElementById('cid').value.trim();
+  if(!c){sst('tst','Enter your Chat ID','se');return;}
+  if(!/^\d+$/.test(c)){sst('tst','Chat ID should be a number','se');return;}
   var b=document.getElementById('tbtn');b.disabled=true;b.textContent='Sending...';
   api({action:'test',cid:c}).then(function(r){
     b.disabled=false;b.textContent='Test connection';
-    if(r&&r.ok){localStorage.setItem('uq_cid',c);CID=c;document.getElementById('scid').textContent=c;document.getElementById('cbanner').classList.remove('hd');sst('tst','Connected! Check Telegram.','so');cachedProducts=null;localStorage.removeItem('uq_products');}
+    if(r&&r.ok){localStorage.setItem('uq_cid',c);CID=c;document.getElementById('scid').textContent=c;document.getElementById('cbanner').classList.remove('hd');sst('tst','Connected! Check Telegram.','so');cachedProducts=null;localStorage.removeItem('uq_products');settingsLoaded=false;}
     else sst('tst',(r?r.error:'Failed'),'se');
   }).catch(function(e){b.disabled=false;b.textContent='Test connection';sst('tst','Connection failed','se');});
 }
