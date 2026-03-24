@@ -259,35 +259,77 @@ var ARKET_CUR_MAP={
   'en-eu':{code:'EUR',symbol:'€'}
 };
 
+/* ====== ARKET CLIENT-SIDE FETCHING — FAST PARALLEL ====== */
+
+var arketWorkingProxy=localStorage.getItem('arket_proxy')||'';
+
+var ARKET_PROXIES=[
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?',
+  'https://api.codetabs.com/v1/proxy?quest='
+];
+
 function fetchArketClientSide(url){
   var parsed=parseArketUrlJS(url);
   if(!parsed)return Promise.reject('Invalid ARKET URL');
 
-  // The user's browser can fetch ARKET pages (no bot block)
-  // We use a CORS proxy since arket.com doesn't set CORS headers
-  var proxies=[
-    'https://api.allorigins.win/raw?url=',
-    'https://corsproxy.io/?',
-    'https://api.codetabs.com/v1/proxy?quest='
-  ];
-
-  function tryProxy(i){
-    if(i>=proxies.length)return Promise.reject('Could not fetch ARKET product');
-    var proxyUrl=proxies[i]+encodeURIComponent(url);
-    return fetch(proxyUrl).then(function(r){
-      if(!r.ok)throw new Error('HTTP '+r.status);
-      return r.text();
+  if(arketWorkingProxy){
+    return fetchViaProxy(arketWorkingProxy,url).catch(function(){
+      arketWorkingProxy='';
+      localStorage.removeItem('arket_proxy');
+      return raceArketProxies(url);
     }).then(function(html){
-      if(!html||html.length<500)throw new Error('Empty response');
-      var product=parseArketHtmlClient(html,parsed);
-      if(!product)throw new Error('Could not parse product');
-      return product;
-    }).catch(function(e){
-      return tryProxy(i+1);
+      return parseArketResult(html,parsed);
     });
   }
 
-  return tryProxy(0);
+  return raceArketProxies(url).then(function(html){
+    return parseArketResult(html,parsed);
+  });
+}
+
+function fetchViaProxy(proxy,url){
+  return fetch(proxy+encodeURIComponent(url)).then(function(r){
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.text();
+  }).then(function(text){
+    if(!text||text.length<500)throw new Error('Empty');
+    return text;
+  });
+}
+
+function raceArketProxies(url){
+  return new Promise(function(resolve,reject){
+    var done=false;
+    var failures=0;
+
+    ARKET_PROXIES.forEach(function(proxy){
+      fetchViaProxy(proxy,url).then(function(html){
+        if(!done){
+          done=true;
+          arketWorkingProxy=proxy;
+          try{localStorage.setItem('arket_proxy',proxy);}catch(e){}
+          resolve(html);
+        }
+      }).catch(function(){
+        failures++;
+        if(failures>=ARKET_PROXIES.length&&!done){
+          done=true;
+          reject('All proxies failed');
+        }
+      });
+    });
+
+    setTimeout(function(){
+      if(!done){done=true;reject('Timeout loading ARKET product');}
+    },15000);
+  });
+}
+
+function parseArketResult(html,parsed){
+  var product=parseArketHtmlClient(html,parsed);
+  if(!product)throw new Error('Could not parse product from HTML');
+  return product;
 }
 
 function parseArketHtmlClient(html,parsed){
