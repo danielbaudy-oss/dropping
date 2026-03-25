@@ -187,17 +187,6 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
       <div id="tst" class="hd"></div>
     </div>
-    <div class="sec">
-      <h2>Default sizes</h2>
-      <label>Tops (T-shirts, shirts, jackets)</label>
-      <select id="sts"><option value="">Not set</option><option value="XXS">XXS</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option><option value="3XL">3XL</option></select>
-      <label>Bottoms (Pants, jeans, shorts)</label>
-      <select id="sb"><option value="">Not set</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option><option value="32">32</option><option value="33">33</option><option value="34">34</option><option value="36">36</option><option value="38">38</option><option value="40">40</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option></select>
-      <label>Region</label>
-      <select id="rg"><option value="es">Spain</option><option value="uk">United Kingdom</option><option value="us">United States</option><option value="de">Germany</option><option value="fr">France</option><option value="it">Italy</option><option value="nl">Netherlands</option><option value="be">Belgium</option><option value="pt">Portugal</option><option value="se">Sweden</option><option value="dk">Denmark</option><option value="pl">Poland</option></select>
-      <button class="btn bblk" id="savbtn" onclick="saveSet()">Save</button>
-      <div id="sst" class="hd"></div>
-    </div>
   </div>
 </div>
 
@@ -1173,27 +1162,13 @@ if(r&&r.ok){localStorage.setItem('uq_cid',c);CID=c;if(r.secret){localStorage.set
   }).catch(function(e){b.disabled=false;b.textContent='Test connection';sst('tst','Connection failed','se');});
 }
 
-function saveSet(){
-  if(!CID){sst('sst','Connect Telegram first','se');return;}
-  var b=document.getElementById('savbtn');b.disabled=true;b.textContent='Saving...';
-  api({action:'save',cid:CID,st:document.getElementById('sts').value,sb:document.getElementById('sb').value,rg:document.getElementById('rg').value}).then(function(r){
-    if(r.error){b.disabled=false;b.textContent='Save';sst('sst',r.error,'se');}
-    else{b.textContent='Saved';b.classList.add('btn-saved');sst('sst','Settings saved','so');setTimeout(function(){b.disabled=false;b.textContent='Save';b.classList.remove('btn-saved');},2000);}
-  }).catch(function(){b.disabled=false;b.textContent='Save';sst('sst','Failed to save','se');});
-}
 
 function sst(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
-
-function loadSettings(){
-  if(!CID||settingsLoaded)return;settingsLoaded=true;
-  api({action:'settings',cid:CID}).then(function(u){if(u){setSel('sts',u.size_tops);setSel('sb',u.size_bottoms);setSel('rg',u.region);}}).catch(function(){});
-}
-function setSel(id,v){if(!v)return;var e=document.getElementById(id);for(var i=0;i<e.options.length;i++)if(e.options[i].value===String(v)){e.selectedIndex=i;break;}}
 
 /* ====== INIT ====== */
 if(CID){
   document.getElementById('cid').value=CID;document.getElementById('scid').textContent=CID;document.getElementById('cbanner').classList.remove('hd');
-  loadP(true);loadSettings();
+  loadP(true);
 }else{
   document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">Connect Telegram to receive price alerts. Tap here.</div>';
   document.getElementById('hc').innerHTML='<div class="empty"><h2>No products yet</h2><p>Tap the + button to add<br>a product to watch.</p></div>';
