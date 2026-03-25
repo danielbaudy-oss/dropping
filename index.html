@@ -103,8 +103,8 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <button class="modal-close" onclick="closeAdd()">&#10005;</button>
     </div>
     <label>Product URL</label>
-    <div style="font-size:11px;color:#888;margin-bottom:6px">Copy a product link from <a href="https://www.uniqlo.com" target="_blank" style="color:#FF0000">uniqlo.com</a>, <a href="https://www.arket.com" target="_blank" style="color:#FF0000">arket.com</a> or <a href="https://www.cos.com" target="_blank" style="color:#FF0000">cos.com</a></div>
-    <input type="text" id="aurl" placeholder="https://www.uniqlo.com/... or https://www.arket.com/... or https://www.cos.com/...">
+    <div style="font-size:11px;color:#888;margin-bottom:6px">Copy a product link from <a href="https://www.uniqlo.com" target="_blank" style="color:#FF0000">uniqlo.com</a>, <a href="https://www.arket.com" target="_blank" style="color:#FF0000">arket.com</a>, <a href="https://www.cos.com" target="_blank" style="color:#FF0000">cos.com</a> or <a href="https://shop.mango.com" target="_blank" style="color:#FF0000">mango.com</a></div>
+    <input type="text" id="aurl" placeholder="https://www.uniqlo.com/... or https://www.arket.com/... or https://www.cos.com/... or https://shop.mango.com/...">
     <button class="btn bblk" id="pbtn" onclick="prev()">Look up product</button>
     <div id="psec" class="hd" style="margin-top:16px">
       <div class="pc">
@@ -210,11 +210,12 @@ var CSYM={GBP:'£',USD:'$',CHF:'CHF',SEK:'kr',DKK:'kr',NOK:'kr',PLN:'zł',EUR:'�
 function szName(c){return SZN[c]||c||'';}
 function esc(s){if(!s)return '';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML.replace(/'/g,'&#39;');}
 function imgUrl(src,width){if(!src)return '';return src+(src.indexOf('?')===-1?'?':'&')+'width='+width;}
-function detectStoreJS(url){if(url&&url.indexOf('arket.com')!==-1)return 'arket';if(url&&url.indexOf('cos.com')!==-1)return 'cos';return 'uniqlo';}
+function detectStoreJS(url){if(url&&url.indexOf('arket.com')!==-1)return 'arket';if(url&&url.indexOf('cos.com')!==-1)return 'cos';if(url&&url.indexOf('mango.com')!==-1)return 'mango';return 'uniqlo';}
 function detectStoreFromProduct(p){
   if(p.store&&p.store!=='')return p.store;
   if(p.product_url&&p.product_url.indexOf('arket.com')!==-1)return 'arket';
   if(p.product_url&&p.product_url.indexOf('cos.com')!==-1)return 'cos';
+  if(p.product_url&&p.product_url.indexOf('mango.com')!==-1)return 'mango';
   return 'uniqlo';
 }
 function api(params){
@@ -239,27 +240,46 @@ function clearProductCache(productCode,region){
   try{localStorage.removeItem('uq_pdata_'+productCode+'_'+region);}catch(e){}
 }
 
-/* ====== ARKET CLIENT-SIDE FETCHING ====== */
+/* ====== URL PARSERS ====== */
 
 function parseArketUrlJS(url){
   var m=url.match(/arket\.com\/([a-z]{2}-[a-z]{2})\/product\/([^\/?#]+)/i);
   if(!m)return null;
-  var lm=m[1].toLowerCase();
-  var slug=m[2].replace(/\/$/,'').replace(/\.html$/,'');
-  var skuM=slug.match(/(\d{10})$/);
-  if(!skuM)return null;
+  var lm=m[1].toLowerCase();var slug=m[2].replace(/\/$/,'').replace(/\.html$/,'');
+  var skuM=slug.match(/(\d{10})$/);if(!skuM)return null;
   return{productCode:skuM[1],slug:slug,languageMarket:lm,region:lm,colorCode:skuM[1],store:'arket'};
 }
 
 function parseCosUrlJS(url){
   var m=url.match(/cos\.com\/([a-z]{2}-[a-z]{2})\/.*?product\/([^\/?#]+)/i);
   if(!m)return null;
-  var lm=m[1].toLowerCase();
-  var slug=m[2].replace(/\/$/,'').replace(/\.html$/,'');
-  var skuM=slug.match(/(\d{10})$/);
-  if(!skuM)return null;
+  var lm=m[1].toLowerCase();var slug=m[2].replace(/\/$/,'').replace(/\.html$/,'');
+  var skuM=slug.match(/(\d{10})$/);if(!skuM)return null;
   return{productCode:skuM[1],slug:slug,languageMarket:lm,region:lm,colorCode:skuM[1],store:'cos',market:lm.split('-')[1]};
 }
+
+function parseMangoUrlJS(url){
+  var m=url.match(/shop\.mango\.com\/([a-z]{2})\/([a-z]{2})\/.*?_(\d{8,})(?:\?|$)/i);
+  if(!m){m=url.match(/shop\.mango\.com\/([a-z]{2})\/([a-z]{2})\/.*?(\d{8,})/i);}
+  if(!m)return null;
+  var countryIso=m[1].toUpperCase();var langIso=m[2];var productId=m[3];
+  var colorMatch=url.match(/[?&]c=([^&]+)/i);var colorCode=colorMatch?colorMatch[1]:'';
+  var slugMatch=url.match(/\/p\/(.+?)(?:\?|$)/);var slug=slugMatch?slugMatch[1]:'';
+  return{productCode:productId,productId:productId,slug:slug,countryIso:countryIso,langIso:langIso,languageMarket:langIso+'-'+countryIso.toLowerCase(),region:langIso+'-'+countryIso.toLowerCase(),colorCode:colorCode,store:'mango'};
+}
+
+function parseUniqloUrlJS(url){
+  try{
+    var m=url.match(/products\/(E?\d{6}-\d{3})/i);var pc=m?m[1]:null;
+    if(!pc){m=url.match(/(\d{6})/);if(m)pc='E'+m[1]+'-000';}
+    if(!pc)return null;
+    if(pc.indexOf('E')!==0)pc='E'+pc;if(pc.indexOf('-')===-1)pc+='-000';
+    var cm=url.match(/colorDisplayCode[=](\w+)/i);var rm=url.match(/uniqlo\.com\/(\w{2})\//);
+    return{productCode:pc,colorCode:cm?cm[1]:null,region:rm?rm[1].toLowerCase():'es',priceGroup:'00'};
+  }catch(e){return null;}
+}
+
+/* ====== CURRENCY MAPS ====== */
 
 var ARKET_CUR_MAP={
   'en-gb':{code:'GBP',symbol:'£'},'en-dk':{code:'DKK',symbol:'kr'},'en-se':{code:'SEK',symbol:'kr'},
@@ -278,7 +298,14 @@ var COS_CUR_MAP={
   'en-no':{code:'NOK',symbol:'kr'},'en-nl':{code:'EUR',symbol:'€'},'en-eu':{code:'EUR',symbol:'€'}
 };
 
-/* ====== PROXY RACING (shared by ARKET + COS) ====== */
+var MANGO_CUR_MAP={
+  'ES':{code:'EUR',symbol:'€'},'DE':{code:'EUR',symbol:'€'},'FR':{code:'EUR',symbol:'€'},
+  'IT':{code:'EUR',symbol:'€'},'PT':{code:'EUR',symbol:'€'},'NL':{code:'EUR',symbol:'€'},
+  'GB':{code:'GBP',symbol:'£'},'US':{code:'USD',symbol:'$'},'SE':{code:'SEK',symbol:'kr'},
+  'DK':{code:'DKK',symbol:'kr'},'PL':{code:'PLN',symbol:'zł'},'CH':{code:'CHF',symbol:'CHF'}
+};
+
+/* ====== PROXY RACING (shared by ARKET, COS, Mango) ====== */
 
 var arketWorkingProxy=localStorage.getItem('arket_proxy')||'';
 
@@ -300,20 +327,11 @@ function fetchViaProxy(proxy,url){
 
 function raceProxies(url){
   return new Promise(function(resolve,reject){
-    var done=false;
-    var failures=0;
+    var done=false;var failures=0;
     ARKET_PROXIES.forEach(function(proxy){
       fetchViaProxy(proxy,url).then(function(html){
-        if(!done){
-          done=true;
-          arketWorkingProxy=proxy;
-          try{localStorage.setItem('arket_proxy',proxy);}catch(e){}
-          resolve(html);
-        }
-      }).catch(function(){
-        failures++;
-        if(failures>=ARKET_PROXIES.length&&!done){done=true;reject('All proxies failed');}
-      });
+        if(!done){done=true;arketWorkingProxy=proxy;try{localStorage.setItem('arket_proxy',proxy);}catch(e){}resolve(html);}
+      }).catch(function(){failures++;if(failures>=ARKET_PROXIES.length&&!done){done=true;reject('All proxies failed');}});
     });
     setTimeout(function(){if(!done){done=true;reject('Timeout loading product');}},15000);
   });
@@ -329,19 +347,13 @@ function proxyFetchHtml(url){
   return raceProxies(url);
 }
 
-/* ====== SHARED HTML PARSERS ====== */
+/* ====== SHARED HTML PARSERS (ARKET/COS) ====== */
 
 function findProductInPP(pp){
   if(pp.blocks){for(var i=0;i<pp.blocks.length;i++){if(pp.blocks[i].product)return pp.blocks[i].product;}}
   if(pp.product)return pp.product;
   if(pp.productData)return pp.productData;
-  function deep(o,d){
-    if(!o||d>5||typeof o!=='object')return null;
-    if(o.sku&&o.name&&(o.items||o.priceAsNumber!==undefined))return o;
-    var ks=Object.keys(o);
-    for(var k=0;k<ks.length;k++){var f=deep(o[ks[k]],d+1);if(f)return f;}
-    return null;
-  }
+  function deep(o,d){if(!o||d>5||typeof o!=='object')return null;if(o.sku&&o.name&&(o.items||o.priceAsNumber!==undefined))return o;var ks=Object.keys(o);for(var k=0;k<ks.length;k++){var f=deep(o[ks[k]],d+1);if(f)return f;}return null;}
   return deep(pp,0);
 }
 
@@ -359,10 +371,7 @@ function extractSizesClient(html){
 function parseNextData(html){
   var ndMatch=html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
   if(!ndMatch)return null;
-  try{
-    var nd=JSON.parse(ndMatch[1]);
-    return nd.props?(nd.props.pageProps||null):(nd.pageProps||null);
-  }catch(e){return null;}
+  try{var nd=JSON.parse(ndMatch[1]);return nd.props?(nd.props.pageProps||null):(nd.pageProps||null);}catch(e){return null;}
 }
 
 function getCurInfoFromPageProps(pp,fallback){
@@ -375,60 +384,32 @@ function getCurInfoFromPageProps(pp,fallback){
 }
 
 function normaliseHMGroupClient(prod,parsed,curInfo,storeName){
-  var allV=[prod];
-  var rv=(prod.relatedProducts||[]).filter(function(r){return r.relation==='variant';});
-  allV=allV.concat(rv);
+  var allV=[prod];var rv=(prod.relatedProducts||[]).filter(function(r){return r.relation==='variant';});allV=allV.concat(rv);
   var colorMap={},sizeSet={};
   for(var v=0;v<allV.length;v++){
-    var vr=allV[v];
-    var sku=vr.sku||'';
-    var cn=vr.variantName||vr.var_pdp_color_desc||'';
+    var vr=allV[v];var sku=vr.sku||'';var cn=vr.variantName||vr.var_pdp_color_desc||'';
     var img=(vr.media&&vr.media.standard&&vr.media.standard[0])||'';
-    var vp=vr.priceAsNumber||0;
-    var vb=vr.priceBeforeDiscountAsNumber||vp;
-    var vs=vr.discountPercent>0||vp<vb;
-    var szs=[];
-    var items=vr.items||[];
-    for(var s=0;s<items.length;s++){
-      var it=items[s];
-      var sn=it.name||'';
-      sizeSet[sn]=true;
-      szs.push({sizeCode:sn,sizeName:sn,currentPrice:vp,basePrice:vb,onSale:vs,inStock:it.stock!=='no',currency:curInfo.code,currencySymbol:curInfo.symbol});
-    }
+    var vp=vr.priceAsNumber||0;var vb=vr.priceBeforeDiscountAsNumber||vp;var vs=vr.discountPercent>0||vp<vb;
+    var szs=[];var items=vr.items||[];
+    for(var s=0;s<items.length;s++){var it=items[s];var sn=it.name||'';sizeSet[sn]=true;szs.push({sizeCode:sn,sizeName:sn,currentPrice:vp,basePrice:vb,onSale:vs,inStock:it.stock!=='no',currency:curInfo.code,currencySymbol:curInfo.symbol});}
     colorMap[sku]={code:sku,name:cn,hex:'',image:img,sizes:szs,available:vr.available!==false};
   }
   var colors=Object.keys(colorMap).map(function(k){return colorMap[k];});
   colors.sort(function(a,b){return(a.available&&!b.available)?-1:(!a.available&&b.available)?1:0;});
   var sizes=Object.keys(sizeSet).map(function(k){return{code:k,name:k};});
-  var cp=prod.priceAsNumber||0;
-  var op=prod.priceBeforeDiscountAsNumber||cp;
+  var cp=prod.priceAsNumber||0;var op=prod.priceBeforeDiscountAsNumber||cp;
   var mi=(prod.media&&prod.media.standard&&prod.media.standard[0])||'';
-  var nm=prod.name||'Unknown';
-  var cat=nm.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
-  return{
-    productCode:parsed.productCode,name:nm,image:mi,category:cat,
-    currentPrice:cp,originalPrice:op,onSale:cp<op,
-    currency:curInfo.code,currencySymbol:curInfo.symbol,
-    colors:colors,sizes:sizes,region:parsed.languageMarket,mainImage:mi,store:storeName
-  };
+  var nm=prod.name||'Unknown';var cat=nm.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
+  return{productCode:parsed.productCode,name:nm,image:mi,category:cat,currentPrice:cp,originalPrice:op,onSale:cp<op,currency:curInfo.code,currencySymbol:curInfo.symbol,colors:colors,sizes:sizes,region:parsed.languageMarket,mainImage:mi,store:storeName};
 }
 
 function normaliseJsonLdClient(ld,parsed,curInfo,html,storeName){
-  var name=ld.name||'Unknown';
-  var mi='';
-  if(ld.image)mi=Array.isArray(ld.image)?ld.image[0]:ld.image;
-  var cp=0,op=0,cur=curInfo.code;
-  var offers=ld.offers;
-  if(offers){
-    if(Array.isArray(offers)){
-      for(var i=0;i<offers.length;i++){var p=parseFloat(offers[i].price)||0;if(p>0&&(cp===0||p<cp))cp=p;if(p>op)op=p;if(offers[i].priceCurrency)cur=offers[i].priceCurrency;}
-    }else{cp=parseFloat(offers.price)||0;op=cp;if(offers.priceCurrency)cur=offers.priceCurrency;}
-  }
+  var name=ld.name||'Unknown';var mi='';if(ld.image)mi=Array.isArray(ld.image)?ld.image[0]:ld.image;
+  var cp=0,op=0,cur=curInfo.code;var offers=ld.offers;
+  if(offers){if(Array.isArray(offers)){for(var i=0;i<offers.length;i++){var p=parseFloat(offers[i].price)||0;if(p>0&&(cp===0||p<cp))cp=p;if(p>op)op=p;if(offers[i].priceCurrency)cur=offers[i].priceCurrency;}}else{cp=parseFloat(offers.price)||0;op=cp;if(offers.priceCurrency)cur=offers.priceCurrency;}}
   if(op===0)op=cp;
-  var symMap={GBP:'£',EUR:'€',USD:'$',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',PLN:'zł',CAD:'$',AUD:'$'};
-  var sym=symMap[cur]||curInfo.symbol;
-  var szNames=extractSizesClient(html);
-  var sizes=[],cszs=[];
+  var symMap={GBP:'£',EUR:'€',USD:'$',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',PLN:'zł',CAD:'$',AUD:'$'};var sym=symMap[cur]||curInfo.symbol;
+  var szNames=extractSizesClient(html);var sizes=[],cszs=[];
   for(var s=0;s<szNames.length;s++){sizes.push({code:szNames[s],name:szNames[s]});cszs.push({sizeCode:szNames[s],sizeName:szNames[s],currentPrice:cp,basePrice:op,onSale:cp<op,inStock:true,currency:cur,currencySymbol:sym});}
   var cat=name.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
   return{productCode:parsed.productCode,name:name,image:mi,category:cat,currentPrice:cp,originalPrice:op,onSale:cp<op,currency:cur,currencySymbol:sym,colors:[{code:parsed.productCode,name:'',hex:'',image:mi,sizes:cszs,available:true}],sizes:sizes,region:parsed.languageMarket,mainImage:mi,store:storeName};
@@ -436,127 +417,123 @@ function normaliseJsonLdClient(ld,parsed,curInfo,html,storeName){
 
 function normaliseMetaClient(html,parsed,curInfo,storeName,brandRegex){
   function getMeta(prop){var r1=new RegExp('<meta[^>]*property="'+prop+'"[^>]*content="([^"]*)"','i');var r2=new RegExp('<meta[^>]*content="([^"]*)"[^>]*property="'+prop+'"','i');var m=html.match(r1)||html.match(r2);return m?m[1]:null;}
-  var name=getMeta('og:title');
-  if(name)name=name.replace(brandRegex,'').trim();else name='Unknown';
-  var mi=getMeta('og:image')||'';
-  var ps=getMeta('product:price:amount');
-  var cp=ps?(parseFloat(ps)||0):0;
-  var cur=getMeta('product:price:currency')||curInfo.code;
-  if(name==='Unknown'||cp===0)return null;
-  var symMap={GBP:'£',EUR:'€',USD:'$',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',PLN:'zł',CAD:'$',AUD:'$'};
-  var sym=symMap[cur]||curInfo.symbol;
-  var szNames=extractSizesClient(html);
-  var sizes=[],cszs=[];
+  var name=getMeta('og:title');if(name)name=name.replace(brandRegex,'').trim();else name='Unknown';
+  var mi=getMeta('og:image')||'';var ps=getMeta('product:price:amount');var cp=ps?(parseFloat(ps)||0):0;
+  var cur=getMeta('product:price:currency')||curInfo.code;if(name==='Unknown'||cp===0)return null;
+  var symMap={GBP:'£',EUR:'€',USD:'$',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',PLN:'zł',CAD:'$',AUD:'$'};var sym=symMap[cur]||curInfo.symbol;
+  var szNames=extractSizesClient(html);var sizes=[],cszs=[];
   for(var s=0;s<szNames.length;s++){sizes.push({code:szNames[s],name:szNames[s]});cszs.push({sizeCode:szNames[s],sizeName:szNames[s],currentPrice:cp,basePrice:cp,onSale:false,inStock:true,currency:cur,currencySymbol:sym});}
   var cat=name.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
   return{productCode:parsed.productCode,name:name,image:mi,category:cat,currentPrice:cp,originalPrice:cp,onSale:false,currency:cur,currencySymbol:sym,colors:[{code:parsed.productCode,name:'',hex:'',image:mi,sizes:cszs,available:true}],sizes:sizes,region:parsed.languageMarket,mainImage:mi,store:storeName};
 }
 
 function parseHMGroupHtml(html,parsed,curMap,storeName,brandRegex){
-  var lm=parsed.languageMarket||'en-gb';
-  var curInfo=curMap[lm]||{code:'EUR',symbol:'€'};
-
+  var lm=parsed.languageMarket||'en-gb';var curInfo=curMap[lm]||{code:'EUR',symbol:'€'};
   var pp=parseNextData(html);
-  if(pp){
-    curInfo=getCurInfoFromPageProps(pp,curInfo);
-    var prod=findProductInPP(pp);
-    if(prod)return normaliseHMGroupClient(prod,parsed,curInfo,storeName);
-  }
-
-  var ldRe=/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
-  var ldM;
-  while((ldM=ldRe.exec(html))!==null){
-    try{
-      var ld=JSON.parse(ldM[1]);
-      if(Array.isArray(ld)){for(var i=0;i<ld.length;i++){if(ld[i]['@type']==='Product')return normaliseJsonLdClient(ld[i],parsed,curInfo,html,storeName);}}
-      else if(ld['@type']==='Product')return normaliseJsonLdClient(ld,parsed,curInfo,html,storeName);
-    }catch(e){}
-  }
-
+  if(pp){curInfo=getCurInfoFromPageProps(pp,curInfo);var prod=findProductInPP(pp);if(prod)return normaliseHMGroupClient(prod,parsed,curInfo,storeName);}
+  var ldRe=/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;var ldM;
+  while((ldM=ldRe.exec(html))!==null){try{var ld=JSON.parse(ldM[1]);if(Array.isArray(ld)){for(var i=0;i<ld.length;i++){if(ld[i]['@type']==='Product')return normaliseJsonLdClient(ld[i],parsed,curInfo,html,storeName);}}else if(ld['@type']==='Product')return normaliseJsonLdClient(ld,parsed,curInfo,html,storeName);}catch(e){}}
   return normaliseMetaClient(html,parsed,curInfo,storeName,brandRegex);
 }
 
 /* ====== ARKET CLIENT-SIDE FETCH ====== */
 
 function fetchArketClientSide(url){
-  var parsed=parseArketUrlJS(url);
-  if(!parsed)return Promise.reject('Invalid ARKET URL');
+  var parsed=parseArketUrlJS(url);if(!parsed)return Promise.reject('Invalid ARKET URL');
   return proxyFetchHtml(url).then(function(html){
     var product=parseHMGroupHtml(html,parsed,ARKET_CUR_MAP,'arket',/\s*[-|]\s*ARKET$/i);
-    if(!product)throw new Error('Could not parse ARKET product');
-    return product;
+    if(!product)throw new Error('Could not parse ARKET product');return product;
   });
 }
 
 /* ====== COS CLIENT-SIDE FETCH ====== */
 
 function fetchCosClientSide(url){
-  var parsed=parseCosUrlJS(url);
-    if(!parsed)return Promise.reject('Invalid COS URL');
+  var parsed=parseCosUrlJS(url);if(!parsed)return Promise.reject('Invalid COS URL');
   return proxyFetchHtml(url).then(function(html){
     var product=parseHMGroupHtml(html,parsed,COS_CUR_MAP,'cos',/\s*[-|]\s*COS$/i);
-    if(!product)throw new Error('Could not parse COS product');
-    return product;
+    if(!product)throw new Error('Could not parse COS product');return product;
   });
 }
 
-/* ====== UNIQLO CLIENT-SIDE API FETCH ====== */
+/* ====== MANGO CLIENT-SIDE FETCH ====== */
 
-function parseUniqloUrlJS(url){
-  try{
-    var m=url.match(/products\/(E?\d{6}-\d{3})/i);
-    var pc=m?m[1]:null;
-    if(!pc){m=url.match(/(\d{6})/);if(m)pc='E'+m[1]+'-000';}
-    if(!pc)return null;
-    if(pc.indexOf('E')!==0)pc='E'+pc;
-    if(pc.indexOf('-')===-1)pc+='-000';
-    var cm=url.match(/colorDisplayCode[=](\w+)/i);
-    var rm=url.match(/uniqlo\.com\/(\w{2})\//);
-    return{productCode:pc,colorCode:cm?cm[1]:null,region:rm?rm[1].toLowerCase():'es',priceGroup:'00'};
-  }catch(e){return null;}
+function fetchMangoClientSide(url){
+  var parsed=parseMangoUrlJS(url);
+  if(!parsed)return Promise.reject('Invalid Mango URL');
+  var curInfo=MANGO_CUR_MAP[parsed.countryIso]||{code:'EUR',symbol:'€'};
+  var MANGO_API='https://online-orchestrator.mango.com';
+  var ASSETS='https://shop.mango.com';
+
+  var productUrl=MANGO_API+'/v4/products?channelId=shop&countryIso='+parsed.countryIso+'&languageIso='+parsed.langIso+'&productId='+parsed.productId;
+  var priceUrl=MANGO_API+'/v3/prices/products?channelId=shop&countryIso='+parsed.countryIso+'&productId='+parsed.productId;
+  var stockUrl=MANGO_API+'/v3/stock/products?countryIso='+parsed.countryIso+'&channelId=shop&productId='+parsed.productId;
+
+  function proxyFetchJson(apiUrl){
+    return proxyFetchHtml(apiUrl).then(function(text){return JSON.parse(text);});
+  }
+
+  return Promise.all([
+    proxyFetchJson(productUrl).catch(function(){return null;}),
+    proxyFetchJson(priceUrl).catch(function(){return null;}),
+    proxyFetchJson(stockUrl).catch(function(){return null;})
+  ]).then(function(results){
+    var productData=results[0];var priceData=results[1];var stockData=results[2];
+    if(!productData||!productData.name)throw new Error('Could not load Mango product');
+    return normaliseMangoClient(productData,priceData,stockData,parsed,curInfo);
+  });
 }
+
+function normaliseMangoClient(productData,priceData,stockData,parsed,curInfo){
+  var ASSETS='https://shop.mango.com';
+  var name=productData.name||'Unknown';var colorMap={},sizeSet={},allPrices=[];
+  var prodColors=productData.colors||[];
+  for(var c=0;c<prodColors.length;c++){
+    var pc=prodColors[c];var colorId=pc.id||'';var colorName=pc.label||'';var image='';
+    if(pc.looks){var lk=Object.keys(pc.looks);if(lk.length>0){var fl=pc.looks[lk[0]];if(fl.images){var ik=Object.keys(fl.images);if(ik.length>0&&fl.images[ik[0]].img)image=ASSETS+fl.images[ik[0]].img;}}}
+    var colorPrice=0,colorBase=0,onSale=false;
+    if(priceData&&priceData[colorId]){colorPrice=priceData[colorId].price||0;colorBase=priceData[colorId].crossedOutPrice||colorPrice;onSale=priceData[colorId].starPrice===true||colorBase>colorPrice;}
+    if(colorPrice>0)allPrices.push(colorPrice);
+    var stockForColor={};if(stockData&&stockData.colors&&stockData.colors[colorId])stockForColor=stockData.colors[colorId].sizes||{};
+    var sizes=[];var prodSizes=pc.sizes||[];
+    for(var s=0;s<prodSizes.length;s++){
+      var ps=prodSizes[s];var sizeId=ps.id||'';var sizeName=ps.label||ps.shortDescription||sizeId;sizeSet[sizeName]=true;
+      var inStock=true;if(stockForColor[sizeId])inStock=stockForColor[sizeId].available!==false;
+      sizes.push({sizeCode:sizeName,sizeName:sizeName,sizeId:sizeId,currentPrice:colorPrice,basePrice:colorBase,onSale:onSale,inStock:inStock,currency:curInfo.code,currencySymbol:curInfo.symbol});
+    }
+    colorMap[colorId]={code:colorId,name:colorName,hex:pc.rgb||'',image:image,sizes:sizes,available:sizes.some(function(sz){return sz.inStock;})};
+  }
+  var colors=Object.keys(colorMap).map(function(k){return colorMap[k];});
+  colors.sort(function(a,b){return(a.available&&!b.available)?-1:(!a.available&&b.available)?1:0;});
+  var sizes=Object.keys(sizeSet).map(function(k){return{code:k,name:k};});
+  var cp=allPrices.length>0?Math.min.apply(null,allPrices):0;var op=cp;
+  if(priceData){var pk=Object.keys(priceData);for(var p=0;p<pk.length;p++){var bp=priceData[pk[p]].crossedOutPrice||priceData[pk[p]].price||0;if(bp>op)op=bp;}}
+  var mi=colors.length>0?colors[0].image:'';
+  var cat=name.toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/)?'bottoms':'tops';
+  return{productCode:parsed.productCode,name:name,image:mi,category:cat,currentPrice:cp,originalPrice:op,onSale:cp<op,currency:curInfo.code,currencySymbol:curInfo.symbol,colors:colors,sizes:sizes,region:parsed.region,mainImage:mi,store:'mango'};
+}
+
+/* ====== UNIQLO CLIENT-SIDE API FETCH ====== */
 
 var UQ_LANGS={'es':'en','eu':'en','uk':'en','us':'en','de':'de','fr':'fr','jp':'ja','it':'it','nl':'en','be':'en','pt':'en','se':'en','dk':'en','pl':'en'};
 var UQ_CLIENTS={'es':'uq.es.web-spa','eu':'uq.eu.web-spa','de':'uq.de.web-spa','fr':'uq.fr.web-spa','uk':'uq.uk.web-spa','us':'uq.us.web-spa','jp':'uq.jp.web-spa','it':'uq.it.web-spa'};
 
 function fetchUniqloClientSide(url){
-  var parsed=parseUniqloUrlJS(url);
-  if(!parsed)return Promise.reject('Invalid URL');
-  var lang=UQ_LANGS[parsed.region]||'en';
-  var cn=parsed.productCode.replace('E','').replace('-000','');
-  var apiUrl='https://www.uniqlo.com/'+parsed.region+'/api/commerce/v5/'+lang+'/products/'+parsed.productCode+
-    '/price-groups/00/l2s?withPrices=true&withStocks=true&includePreviousPrice=false&httpFailure=true';
-  return fetchUniqloApi(apiUrl).then(function(data){
-    return normaliseUniqloClient(data,parsed,cn);
-  });
+  var parsed=parseUniqloUrlJS(url);if(!parsed)return Promise.reject('Invalid URL');
+  var lang=UQ_LANGS[parsed.region]||'en';var cn=parsed.productCode.replace('E','').replace('-000','');
+  var apiUrl='https://www.uniqlo.com/'+parsed.region+'/api/commerce/v5/'+lang+'/products/'+parsed.productCode+'/price-groups/00/l2s?withPrices=true&withStocks=true&includePreviousPrice=false&httpFailure=true';
+  return fetchUniqloApi(apiUrl).then(function(data){return normaliseUniqloClient(data,parsed,cn);});
 }
 
 function fetchUniqloApi(apiUrl){
-  return fetch(apiUrl,{headers:{'Accept':'application/json'}}).then(function(r){
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    return r.json();
-  }).then(function(data){
-    if(data.status==='ok')return data;
-    throw new Error('API status not ok');
-  }).catch(function(){
-    return raceUniqloProxies(apiUrl);
-  });
+  return fetch(apiUrl,{headers:{'Accept':'application/json'}}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(data){if(data.status==='ok')return data;throw new Error('API status not ok');}).catch(function(){return raceUniqloProxies(apiUrl);});
 }
 
 function raceUniqloProxies(apiUrl){
   return new Promise(function(resolve,reject){
     var done=false;var failures=0;
     ARKET_PROXIES.forEach(function(proxy){
-      fetch(proxy+encodeURIComponent(apiUrl)).then(function(r){
-        if(!r.ok)throw new Error('HTTP '+r.status);
-        return r.json();
-      }).then(function(data){
-        if(!done&&data.status==='ok'){done=true;resolve(data);}
-        else if(!done)throw new Error('bad data');
-      }).catch(function(){
-        failures++;
-        if(failures>=ARKET_PROXIES.length&&!done){done=true;reject('All proxies failed');}
-      });
+      fetch(proxy+encodeURIComponent(apiUrl)).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(data){if(!done&&data.status==='ok'){done=true;resolve(data);}else if(!done)throw new Error('bad data');}).catch(function(){failures++;if(failures>=ARKET_PROXIES.length&&!done){done=true;reject('All proxies failed');}});
     });
     setTimeout(function(){if(!done){done=true;reject('Timeout');}},12000);
   });
@@ -565,46 +542,20 @@ function raceUniqloProxies(apiUrl){
 function normaliseUniqloClient(data,parsed,cn){
   var l2s=data.result.l2s||[],prices=data.result.prices||{},stocks=data.result.stocks||{};
   var colorMap={},sizeMap={};
-  var SZN_FULL={'001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL',
-    '028':'28','029':'29','030':'30','031':'31','032':'32','033':'33','034':'34','036':'36','038':'38','040':'40'};
+  var SZN_FULL={'001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','028':'28','029':'29','030':'30','031':'31','032':'32','033':'33','034':'34','036':'36','038':'38','040':'40'};
   for(var i=0;i<l2s.length;i++){
     var it=l2s[i],cc=it.color.displayCode,sc=it.size.displayCode,id=it.l2Id;
     if(!colorMap[cc])colorMap[cc]={code:cc,name:'',image:'https://image.uniqlo.com/UQ/ST3/eu/imagesgoods/'+cn+'/item/eugoods_'+cc+'_'+cn+'_3x4.jpg',sizes:[]};
     if(!sizeMap[sc])sizeMap[sc]={code:sc,name:SZN_FULL[sc]||sc};
-    var pi=prices[id]||{},si=stocks[id]||{};
-    var base=(pi.base&&pi.base.value)||0,promo=(pi.promo&&pi.promo.value)||null;
-    colorMap[cc].sizes.push({
-      sizeCode:sc,sizeName:SZN_FULL[sc]||sc,
-      currentPrice:promo||base,basePrice:base,
-      onSale:promo!==null&&promo<base,
-      inStock:si.statusCode!=='STOCK_OUT',
-      currency:(pi.base&&pi.base.currency)?pi.base.currency.code:'EUR',
-      currencySymbol:(pi.base&&pi.base.currency)?pi.base.currency.symbol:'€'
-    });
+    var pi=prices[id]||{},si=stocks[id]||{};var base=(pi.base&&pi.base.value)||0,promo=(pi.promo&&pi.promo.value)||null;
+    colorMap[cc].sizes.push({sizeCode:sc,sizeName:SZN_FULL[sc]||sc,currentPrice:promo||base,basePrice:base,onSale:promo!==null&&promo<base,inStock:si.statusCode!=='STOCK_OUT',currency:(pi.base&&pi.base.currency)?pi.base.currency.code:'EUR',currencySymbol:(pi.base&&pi.base.currency)?pi.base.currency.symbol:'€'});
   }
   var colors=Object.keys(colorMap).map(function(k){return colorMap[k];});
-  var sizes=Object.keys(sizeMap).map(function(k){return sizeMap[k];});
-  sizes.sort(function(a,b){return a.code.localeCompare(b.code);});
-  var all=[],hi=0;
-  Object.keys(prices).forEach(function(id){
-    var p=prices[id];
-    var c=(p.promo&&p.promo.value)?p.promo.value:(p.base?p.base.value:0);
-    if(c>0)all.push(c);
-    if(p.base&&p.base.value>hi)hi=p.base.value;
-  });
-  var lo=all.length>0?Math.min.apply(null,all):0;
-  var cur='EUR',sym='€';
+  var sizes=Object.keys(sizeMap).map(function(k){return sizeMap[k];});sizes.sort(function(a,b){return a.code.localeCompare(b.code);});
+  var all=[],hi=0;Object.keys(prices).forEach(function(id){var p=prices[id];var c=(p.promo&&p.promo.value)?p.promo.value:(p.base?p.base.value:0);if(c>0)all.push(c);if(p.base&&p.base.value>hi)hi=p.base.value;});
+  var lo=all.length>0?Math.min.apply(null,all):0;var cur='EUR',sym='€';
   if(colors.length>0&&colors[0].sizes.length>0){cur=colors[0].sizes[0].currency;sym=colors[0].sizes[0].currencySymbol;}
-  var nameFromUrl=parsed.productCode.replace('E','').replace('-000','');
-  return{
-    productCode:parsed.productCode,name:'Product '+nameFromUrl,
-    image:colors.length>0?colors[0].image:'',category:'tops',
-    currentPrice:lo,originalPrice:hi,onSale:lo<hi,
-    currency:cur,currencySymbol:sym,
-    colors:colors,sizes:sizes,region:parsed.region,
-    mainImage:colors.length>0?colors[0].image:'',
-    _needsName:true
-  };
+  return{productCode:parsed.productCode,name:'Product '+parsed.productCode.replace('E','').replace('-000',''),image:colors.length>0?colors[0].image:'',category:'tops',currentPrice:lo,originalPrice:hi,onSale:lo<hi,currency:cur,currencySymbol:sym,colors:colors,sizes:sizes,region:parsed.region,mainImage:colors.length>0?colors[0].image:'',_needsName:true};
 }
 
 /* ====== NAVIGATION ====== */
@@ -624,94 +575,65 @@ function loadP(force){
   var localCache=localStorage.getItem('uq_products');
   if(localCache){
     try{var cached=JSON.parse(localCache);cachedProducts=cached;renderP(cached);}catch(e){localStorage.removeItem('uq_products');document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';}
-  }else if(!force&&cachedProducts!==null){
-    renderP(cachedProducts);return;
-  }else{
-    document.getElementById('hb').innerHTML='';
-    document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';
-  }
+  }else if(!force&&cachedProducts!==null){renderP(cachedProducts);return;}
+  else{document.getElementById('hb').innerHTML='';document.getElementById('hc').innerHTML='<div style="text-align:center;padding:40px;color:#999"><div class="loader"></div></div>';}
   api({action:'products',cid:CID}).then(function(ps){
     cachedProducts=Array.isArray(ps)?ps:[];
     localStorage.setItem('uq_products',JSON.stringify(cachedProducts));
-        renderP(cachedProducts);
+    renderP(cachedProducts);
     pushClientPrices(cachedProducts);
   }).catch(function(e){
     if(!cachedProducts||cachedProducts.length===0){cachedProducts=[];renderP([]);}
   });
 }
 
+/* ====== CLIENT-SIDE PRICE PUSH ====== */
+
 function pushClientPrices(products){
   if(!products||products.length===0||!CID)return;
-
-  // Only push once per hour
   var lastPush=localStorage.getItem('uq_last_push')||'0';
   if(Date.now()-parseInt(lastPush)<3600000)return;
-
-  // Find products that need client-side price fetch (ARKET, COS)
   var toFetch=[];
   for(var i=0;i<products.length;i++){
     var store=detectStoreFromProduct(products[i]);
-    if(store==='arket'||store==='cos'){
-      toFetch.push(products[i]);
-    }
+    if(store==='arket'||store==='cos'||store==='mango')toFetch.push(products[i]);
   }
   if(toFetch.length===0)return;
-
-  // Group by product URL to avoid duplicate fetches
   var groups={};
   for(var i=0;i<toFetch.length;i++){
-    var p=toFetch[i];
-    var url=p.product_url||'';
-    if(!url)continue;
+    var p=toFetch[i];var url=p.product_url||'';if(!url)continue;
     if(url.indexOf('http')!==0){
       var store=detectStoreFromProduct(p);
-      url='https://www.'+(store==='cos'?'cos':'arket')+'.com'+url;
+      url=store==='mango'?'https://shop.mango.com'+url:'https://www.'+(store==='cos'?'cos':'arket')+'.com'+url;
     }
     var k=p.product_code+'_'+p.region;
     if(!groups[k])groups[k]={url:url,store:detectStoreFromProduct(p),products:[p]};
     else groups[k].products.push(p);
   }
-
-  var keys=Object.keys(groups);
-  var priceResults=[];
-  var fetched=0;
-
+  var keys=Object.keys(groups);var priceResults=[];var fetched=0;
   function fetchNext(){
     if(fetched>=keys.length){
       if(priceResults.length>0){
         localStorage.setItem('uq_last_push',String(Date.now()));
         api({action:'pushprices',cid:CID,pd:JSON.stringify(priceResults)}).then(function(r){
-          if(r&&r.ok&&r.drops>0){
-            cachedProducts=null;
-            localStorage.removeItem('uq_products');
-            loadP(true);
-          }else if(r&&r.ok&&r.updated>0){
-            updateLocalPrices(priceResults);
-          }
+          if(r&&r.ok&&r.drops>0){cachedProducts=null;localStorage.removeItem('uq_products');loadP(true);}
+          else if(r&&r.ok&&r.updated>0){updateLocalPrices(priceResults);}
         }).catch(function(){});
       }
       return;
     }
-
-    var g=groups[keys[fetched]];
-    fetched++;
-
-    var fetchFn=g.store==='cos'?fetchCosClientSide:fetchArketClientSide;
+    var g=groups[keys[fetched]];fetched++;
+    var fetchFn=g.store==='mango'?fetchMangoClientSide:g.store==='cos'?fetchCosClientSide:fetchArketClientSide;
     fetchFn(g.url).then(function(product){
       if(product&&product.currentPrice>0){
         for(var i=0;i<g.products.length;i++){
-          var p=g.products[i];
-          var price=product.currentPrice;
+          var p=g.products[i];var price=product.currentPrice;
           if(p.color_code&&product.colors){
             for(var c=0;c<product.colors.length;c++){
               if(product.colors[c].code===p.color_code&&product.colors[c].sizes){
                 for(var s=0;s<product.colors[c].sizes.length;s++){
-                  if(product.colors[c].sizes[s].sizeCode===p.size_code){
-                    price=product.colors[c].sizes[s].currentPrice;
-                    break;
-                  }
-                }
-                break;
+                  if(product.colors[c].sizes[s].sizeCode===p.size_code){price=product.colors[c].sizes[s].currentPrice;break;}
+                }break;
               }
             }
           }
@@ -719,38 +641,27 @@ function pushClientPrices(products){
         }
       }
       setTimeout(fetchNext,500);
-    }).catch(function(){
-      setTimeout(fetchNext,500);
-    });
+    }).catch(function(){setTimeout(fetchNext,500);});
   }
-
   setTimeout(fetchNext,2000);
 }
 
 function updateLocalPrices(priceResults){
-  if(!cachedProducts||!priceResults)return;
-  var changed=false;
+  if(!cachedProducts||!priceResults)return;var changed=false;
   for(var i=0;i<priceResults.length;i++){
     var pr=priceResults[i];
     for(var j=0;j<cachedProducts.length;j++){
       if(cachedProducts[j].product_code===pr.productCode){
         var old=parseFloat(cachedProducts[j].last_price)||0;
-        if(pr.price!==old){
-          cachedProducts[j].last_price=pr.price;
-          var lp=parseFloat(cachedProducts[j].lowest_price)||9999;
-          if(pr.price<lp)cachedProducts[j].lowest_price=pr.price;
-          changed=true;
-        }
+        if(pr.price!==old){cachedProducts[j].last_price=pr.price;var lp=parseFloat(cachedProducts[j].lowest_price)||9999;if(pr.price<lp)cachedProducts[j].lowest_price=pr.price;changed=true;}
       }
     }
   }
-  if(changed){
-    localStorage.setItem('uq_products',JSON.stringify(cachedProducts));
-    renderP(cachedProducts);
-  }
+  if(changed){localStorage.setItem('uq_products',JSON.stringify(cachedProducts));renderP(cachedProducts);}
 }
 
-  
+/* ====== RENDER PRODUCTS ====== */
+
 function renderP(ps){
   if(!ps||!Array.isArray(ps)||ps.length===0){
     document.getElementById('hb').innerHTML='';
@@ -760,10 +671,9 @@ function renderP(ps){
   var h='';
   for(var i=0;i<ps.length;i++){
     var p=ps[i],l=parseFloat(p.last_price)||0,n=parseFloat(p.initial_price)||l,w=parseFloat(p.lowest_price)||l,d=l<n,pc=d?Math.round((1-l/n)*100):0;
-    var store=detectStoreFromProduct(p);
-    var s=CSYM[p.currency]||'€';
-    var storeName=store==='arket'?'ARKET':store==='cos'?'COS':'Uniqlo';
-    var sizeDisplay=store==='arket'||store==='cos'?esc(p.size_code||''):esc(szName(String(p.size_code)));
+    var store=detectStoreFromProduct(p);var s=CSYM[p.currency]||'€';
+    var storeName=store==='arket'?'ARKET':store==='cos'?'COS':store==='mango'?'Mango':'Uniqlo';
+    var sizeDisplay=store==='arket'||store==='cos'||store==='mango'?esc(p.size_code||''):esc(szName(String(p.size_code)));
     h+='<div class="card" id="c-'+esc(p.id)+'" onclick="openEdit(\''+esc(p.id)+'\')">';
     h+='<div class="ci">';
     h+='<img class="cimg" src="'+esc(p.image_url||'')+'" alt="'+esc(p.name||'Product')+'" referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">';
@@ -829,6 +739,7 @@ function openEdit(id){
   if(cached){populateEditModal(cached);}
   else if(store==='arket'){fetchEditDataArket(editingProduct.product_url);}
   else if(store==='cos'){fetchEditDataCos(editingProduct.product_url);}
+  else if(store==='mango'){fetchEditDataMango(editingProduct.product_url);}
   else{fetchEditData(pc,rg);}
 }
 
@@ -837,40 +748,43 @@ function fetchEditData(pc,rg){
   api({action:'preview',url:url}).then(function(r){
     document.getElementById('editLoading').style.display='none';
     if(r.error){esst('Could not load product details','se');document.getElementById('editContent').classList.remove('hd');return;}
-    cacheProductData(pc,rg,r.product);
-    populateEditModal(r.product);
+    cacheProductData(pc,rg,r.product);populateEditModal(r.product);
   }).catch(function(){
     document.getElementById('editLoading').style.display='none';
-    esst('Could not load product','se');
-    document.getElementById('editContent').classList.remove('hd');
+    esst('Could not load product','se');document.getElementById('editContent').classList.remove('hd');
   });
 }
 
 function fetchEditDataArket(productUrl){
-  var fullUrl=productUrl;
-  if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.arket.com'+fullUrl;
+  var fullUrl=productUrl;if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.arket.com'+fullUrl;
   fetchArketClientSide(fullUrl).then(function(product){
     cacheProductData(editingProduct.product_code,editingProduct.region,product);
-    document.getElementById('editLoading').style.display='none';
-    populateEditModal(product);
+    document.getElementById('editLoading').style.display='none';populateEditModal(product);
   }).catch(function(err){
     document.getElementById('editLoading').style.display='none';
-    esst('Could not load ARKET product: '+err,'se');
-    document.getElementById('editContent').classList.remove('hd');
+    esst('Could not load ARKET product: '+err,'se');document.getElementById('editContent').classList.remove('hd');
   });
 }
 
 function fetchEditDataCos(productUrl){
-  var fullUrl=productUrl;
-  if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.cos.com'+fullUrl;
+  var fullUrl=productUrl;if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.cos.com'+fullUrl;
   fetchCosClientSide(fullUrl).then(function(product){
     cacheProductData(editingProduct.product_code,editingProduct.region,product);
-    document.getElementById('editLoading').style.display='none';
-    populateEditModal(product);
+    document.getElementById('editLoading').style.display='none';populateEditModal(product);
   }).catch(function(err){
     document.getElementById('editLoading').style.display='none';
-    esst('Could not load COS product: '+err,'se');
-    document.getElementById('editContent').classList.remove('hd');
+    esst('Could not load COS product: '+err,'se');document.getElementById('editContent').classList.remove('hd');
+  });
+}
+
+function fetchEditDataMango(productUrl){
+  var fullUrl=productUrl;if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://shop.mango.com'+fullUrl;
+  fetchMangoClientSide(fullUrl).then(function(product){
+    cacheProductData(editingProduct.product_code,editingProduct.region,product);
+    document.getElementById('editLoading').style.display='none';populateEditModal(product);
+  }).catch(function(err){
+    document.getElementById('editLoading').style.display='none';
+    esst('Could not load Mango product: '+err,'se');document.getElementById('editContent').classList.remove('hd');
   });
 }
 
@@ -907,6 +821,22 @@ function editRefreshFromApi(){
     if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.cos.com'+fullUrl;
     if(!fullUrl){esst('Missing product URL','se');btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;document.getElementById('editContent').classList.remove('hd');return;}
     fetchCosClientSide(fullUrl).then(function(product){
+      btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
+      document.getElementById('editLoading').style.display='none';
+      cacheProductData(pc,rg,product);populateEditModal(product);esst('Stock refreshed','so');
+    }).catch(function(){
+      btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
+      document.getElementById('editLoading').style.display='none';
+      esst('Refresh failed','se');document.getElementById('editContent').classList.remove('hd');
+    });
+    return;
+  }
+
+  if(store==='mango'){
+    var fullUrl=editingProduct.product_url||'';
+    if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://shop.mango.com'+fullUrl;
+    if(!fullUrl){esst('Missing product URL','se');btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;document.getElementById('editContent').classList.remove('hd');return;}
+    fetchMangoClientSide(fullUrl).then(function(product){
       btn.innerHTML='&#8635; Refresh stock';btn.disabled=false;
       document.getElementById('editLoading').style.display='none';
       cacheProductData(pc,rg,product);populateEditModal(product);esst('Stock refreshed','so');
@@ -1003,7 +933,7 @@ function saveEdit(){
     store:store,
     purl:editingProduct.product_url||''
   };
-  if((store==='arket'||store==='cos')&&editProd){
+  if((store==='arket'||store==='cos'||store==='mango')&&editProd){
     var img=getImageForColorLocal(editProd,editColor)||editProd.mainImage||'';
     if(img)params.pimg=img;
   }
@@ -1057,52 +987,36 @@ function prev(){
     return;
   }
 
+  if(cStore==='mango'){
+    prevMangoClient(url,b);
+    return;
+  }
+
   // Uniqlo: try client-side first, fall back to backend
-  var backendStarted=false;
-  var clientDone=false;
+  var backendStarted=false;var clientDone=false;
 
   fetchUniqloClientSide(url).then(function(product){
-    if(clientDone)return;
-    clientDone=true;
+    if(clientDone)return;clientDone=true;
     b.disabled=false;b.textContent='Look up product';
-    cProd=product;
-    cParsed=parseUniqloUrlJS(url);
-    cStore='uniqlo';
+    cProd=product;cParsed=parseUniqloUrlJS(url);cStore='uniqlo';
     showPreviewProduct(product,cParsed);
     api({action:'preview',url:url}).then(function(r){
       if(r.ok&&r.product){
-        cProd.name=r.product.name;
-        cProd._needsName=false;
-        cParsed=r.parsed;
+        cProd.name=r.product.name;cProd._needsName=false;cParsed=r.parsed;
         document.getElementById('pnm').textContent=r.product.name;
         cacheProductData(r.parsed.productCode,r.parsed.region,cProd);
         if(r.product.colors){
-          for(var i=0;i<r.product.colors.length;i++){
-            var rc=r.product.colors[i];
-            for(var j=0;j<cProd.colors.length;j++){
-              if(cProd.colors[j].code===rc.code&&rc.name){cProd.colors[j].name=rc.name;}
-            }
-          }
-          if(cProd.colors.length>1){
-            var ch='';
-            for(var i=0;i<cProd.colors.length;i++){
-              var c=cProd.colors[i];
-              ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';
-            }
-            document.getElementById('cols').innerHTML=ch;
-          }
+          for(var i=0;i<r.product.colors.length;i++){var rc=r.product.colors[i];for(var j=0;j<cProd.colors.length;j++){if(cProd.colors[j].code===rc.code&&rc.name){cProd.colors[j].name=rc.name;}}}
+          if(cProd.colors.length>1){var ch='';for(var i=0;i<cProd.colors.length;i++){var c=cProd.colors[i];ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';}document.getElementById('cols').innerHTML=ch;}
         }
       }
     }).catch(function(){});
   }).catch(function(){
-    if(clientDone)return;
-    clientDone=true;
+    if(clientDone)return;clientDone=true;
     if(!backendStarted){backendStarted=true;prevBackend(url,b);}
   });
 
-  setTimeout(function(){
-    if(!clientDone&&!backendStarted){backendStarted=true;prevBackend(url,b);}
-  },4000);
+  setTimeout(function(){if(!clientDone&&!backendStarted){backendStarted=true;prevBackend(url,b);}},4000);
 }
 
 function prevHMGroupClient(url,b,storeName,parseFn,fetchFn){
@@ -1121,6 +1035,25 @@ function prevHMGroupClient(url,b,storeName,parseFn,fetchFn){
   }).catch(function(err){
     b.disabled=false;b.textContent='Look up product';
     sst('ast','Could not load '+storeName.toUpperCase()+' product. Try again.','se');
+  });
+}
+
+function prevMangoClient(url,b){
+  fetchMangoClientSide(url).then(function(product){
+    var parsed=parseMangoUrlJS(url);
+    if(!parsed){b.disabled=false;b.textContent='Look up product';sst('ast','Invalid Mango URL','se');return;}
+    api({action:'preview',url:url,cp:JSON.stringify(product)}).then(function(r){
+      b.disabled=false;b.textContent='Look up product';
+      if(r.error){sst('ast',r.error,'se');return;}
+      handlePreviewResult(r,url);
+    }).catch(function(){
+      b.disabled=false;b.textContent='Look up product';
+      cProd=product;cParsed=parsed;cStore='mango';
+      showPreviewProduct(product,parsed);
+    });
+  }).catch(function(err){
+    b.disabled=false;b.textContent='Look up product';
+    sst('ast','Could not load Mango product. Try again.','se');
   });
 }
 
@@ -1148,16 +1081,9 @@ function showPreviewProduct(product,parsed){
   document.getElementById('psl').textContent=product.onSale?'Sale — was '+product.currencySymbol+product.originalPrice.toFixed(2):'';
   if(product.colors.length>1){
     var ch='';
-    for(var i=0;i<product.colors.length;i++){
-      var c=product.colors[i];
-      ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';
-    }
-    document.getElementById('cols').innerHTML=ch;
-    document.getElementById('csec').classList.remove('hd');
-  }else{
-    document.getElementById('csec').classList.add('hd');
-    if(product.colors.length===1)selColor=product.colors[0].code;
-  }
+    for(var i=0;i<product.colors.length;i++){var c=product.colors[i];ch+='<button class="ob'+(c.code===selColor?' on':'')+'" onclick="pckC(\''+esc(c.code)+'\',this)">'+esc(c.name||c.code)+'</button>';}
+    document.getElementById('cols').innerHTML=ch;document.getElementById('csec').classList.remove('hd');
+  }else{document.getElementById('csec').classList.add('hd');if(product.colors.length===1)selColor=product.colors[0].code;}
   refreshSizes();
   document.getElementById('psec').classList.remove('hd');
 }
@@ -1196,21 +1122,17 @@ function addP(){
   var parsedToUse=cParsed;
   if(!parsedToUse&&cStore==='arket'){parsedToUse=parseArketUrlJS(cFullUrl);}
   if(!parsedToUse&&cStore==='cos'){parsedToUse=parseCosUrlJS(cFullUrl);}
+  if(!parsedToUse&&cStore==='mango'){parsedToUse=parseMangoUrlJS(cFullUrl);}
   if(!parsedToUse){sst('ast','Missing product data','se');b.disabled=false;b.textContent='Start watching';return;}
   var params={
     action:'add',cid:CID,
-    pc:parsedToUse.productCode,
-    cc:selColor,cn:getSelColorName(),sc:selSize,
+    pc:parsedToUse.productCode,cc:selColor,cn:getSelColorName(),sc:selSize,
     tp:document.getElementById('tp').value||'',
-    rg:parsedToUse.region,
-    store:cStore,
-    purl:cFullUrl
+    rg:parsedToUse.region,store:cStore,purl:cFullUrl
   };
-  if((cStore==='arket'||cStore==='cos')&&cProd){
-    params.pname=cProd.name||'';
-    params.pprice=cProd.currentPrice||0;
-    params.pcur=cProd.currency||'GBP';
-    params.pimg=getSelColorImage()||cProd.mainImage||'';
+  if((cStore==='arket'||cStore==='cos'||cStore==='mango')&&cProd){
+    params.pname=cProd.name||'';params.pprice=cProd.currentPrice||0;
+    params.pcur=cProd.currency||'EUR';params.pimg=getSelColorImage()||cProd.mainImage||'';
   }
   api(params).then(function(r){
     b.disabled=false;b.textContent='Start watching';
@@ -1223,9 +1145,7 @@ function addP(){
 
 function getSelColorImage(){
   if(!cProd||!cProd.colors||!selColor)return '';
-  for(var i=0;i<cProd.colors.length;i++){
-    if(cProd.colors[i].code===selColor&&cProd.colors[i].image)return cProd.colors[i].image;
-  }
+  for(var i=0;i<cProd.colors.length;i++){if(cProd.colors[i].code===selColor&&cProd.colors[i].image)return cProd.colors[i].image;}
   return '';
 }
 
