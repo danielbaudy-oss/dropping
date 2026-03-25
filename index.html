@@ -463,24 +463,56 @@ function fetchMangoClientSide(url){
   if(!parsed)return Promise.reject('Invalid Mango URL');
   var curInfo=MANGO_CUR_MAP[parsed.countryIso]||{code:'EUR',symbol:'€'};
   var MANGO_API='https://online-orchestrator.mango.com';
-  var ASSETS='https://shop.mango.com';
 
   var productUrl=MANGO_API+'/v4/products?channelId=shop&countryIso='+parsed.countryIso+'&languageIso='+parsed.langIso+'&productId='+parsed.productId;
   var priceUrl=MANGO_API+'/v3/prices/products?channelId=shop&countryIso='+parsed.countryIso+'&productId='+parsed.productId;
   var stockUrl=MANGO_API+'/v3/stock/products?countryIso='+parsed.countryIso+'&channelId=shop&productId='+parsed.productId;
 
-  function proxyFetchJson(apiUrl){
-    return proxyFetchHtml(apiUrl).then(function(text){return JSON.parse(text);});
+  // Mango JSON APIs are small — use dedicated proxy fetch without size limit
+  function proxyJsonFetch(apiUrl){
+    // Find a working proxy and fetch JSON
+    var proxies=ARKET_PROXIES.slice();
+    if(arketWorkingProxy){
+      // Put working proxy first
+      proxies=proxies.filter(function(p){return p!==arketWorkingProxy;});
+      proxies.unshift(arketWorkingProxy);
+    }
+
+    return new Promise(function(resolve,reject){
+      var done=false;var failures=0;
+      proxies.forEach(function(proxy){
+        fetch(proxy+encodeURIComponent(apiUrl)).then(function(r){
+          if(!r.ok)throw new Error('HTTP '+r.status);
+          return r.text();
+        }).then(function(text){
+          if(!done&&text&&text.length>2){
+            try{
+              var json=JSON.parse(text);
+              done=true;
+              arketWorkingProxy=proxy;
+              try{localStorage.setItem('arket_proxy',proxy);}catch(e){}
+              resolve(json);
+            }catch(e){throw new Error('Not JSON');}
+          }else if(!done)throw new Error('Empty');
+        }).catch(function(){
+          failures++;
+          if(failures>=proxies.length&&!done){done=true;reject('All proxies failed');}
+        });
+      });
+      setTimeout(function(){if(!done){done=true;reject('Timeout');}},12000);
+    });
   }
 
-  return Promise.all([
-    proxyFetchJson(productUrl).catch(function(){return null;}),
-    proxyFetchJson(priceUrl).catch(function(){return null;}),
-    proxyFetchJson(stockUrl).catch(function(){return null;})
-  ]).then(function(results){
-    var productData=results[0];var priceData=results[1];var stockData=results[2];
-    if(!productData||!productData.name)throw new Error('Could not load Mango product');
-    return normaliseMangoClient(productData,priceData,stockData,parsed,curInfo);
+  // Fetch product first (largest, most important), then prices+stock in parallel
+  return proxyJsonFetch(productUrl).then(function(productData){
+    if(!productData||!productData.name)throw new Error('Invalid product data');
+
+    return Promise.all([
+      proxyJsonFetch(priceUrl).catch(function(){return null;}),
+      proxyJsonFetch(stockUrl).catch(function(){return null;})
+    ]).then(function(results){
+      return normaliseMangoClient(productData,results[0],results[1],parsed,curInfo);
+    });
   });
 }
 
