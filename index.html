@@ -214,6 +214,7 @@ var editColor='';
 var editSize='';
 var cStore='uniqlo';
 var cFullUrl='';
+var CID=localStorage.getItem('uq_cid')||'';
 
 var SZN={'1':'XXS','2':'XS','3':'S','4':'M','5':'L','6':'XL','7':'XXL','8':'3XL','001':'XXS','002':'XS','003':'S','004':'M','005':'L','006':'XL','007':'XXL','008':'3XL','28':'28','29':'29','30':'30','31':'31','32':'32','33':'33','34':'34','36':'36'};
 var CSYM={GBP:'£',USD:'$',CHF:'CHF',SEK:'kr',DKK:'kr',NOK:'kr',PLN:'zł',EUR:'€'};
@@ -229,8 +230,17 @@ function detectStoreFromProduct(p){
   return 'uniqlo';
 }
 function api(params){
+  // Auto-attach auth secret to all requests
+  if(CID&&SEC&&!params.sec){params.sec=SEC;}
   var url=API+'?'+Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
-  return fetch(url).then(function(r){return r.json();});
+  return fetch(url).then(function(r){return r.json();}).then(function(data){
+    if(data&&data.error==='AUTH_FAILED'){
+      // Secret invalid — clear and ask to reconnect
+      localStorage.removeItem('uq_sec');SEC='';
+      document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">⚠️ Session expired. Tap here to reconnect Telegram.</div>';
+    }
+    return data;
+  });
 }
 
 function cacheProductData(productCode,region,data){
@@ -1157,7 +1167,8 @@ function testTg(){
   var b=document.getElementById('tbtn');b.disabled=true;b.textContent='Sending...';
   api({action:'test',cid:c}).then(function(r){
     b.disabled=false;b.textContent='Test connection';
-    if(r&&r.ok){localStorage.setItem('uq_cid',c);CID=c;document.getElementById('scid').textContent=c;document.getElementById('cbanner').classList.remove('hd');sst('tst','Connected! Check Telegram.','so');cachedProducts=null;localStorage.removeItem('uq_products');settingsLoaded=false;}
+
+if(r&&r.ok){localStorage.setItem('uq_cid',c);CID=c;if(r.secret){localStorage.setItem('uq_sec',r.secret);SEC=r.secret;}document.getElementById('scid').textContent=c;document.getElementById('cbanner').classList.remove('hd');sst('tst','Connected! Check Telegram.','so');cachedProducts=null;localStorage.removeItem('uq_products');settingsLoaded=false;}
     else sst('tst',(r?r.error:'Failed'),'se');
   }).catch(function(e){b.disabled=false;b.textContent='Test connection';sst('tst','Connection failed','se');});
 }
