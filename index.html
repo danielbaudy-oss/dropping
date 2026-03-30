@@ -232,16 +232,6 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
           <button class="ob" onclick="salePick('saleGender','both',this)">Both</button>
         </div>
 
-        <label>Categories</label>
-        <div class="og" id="saleCats">
-          <button class="ob" onclick="saleToggleCat('all',this)">All</button>
-          <button class="ob" onclick="saleToggleCat('tops',this)">Tops</button>
-          <button class="ob" onclick="saleToggleCat('bottoms',this)">Bottoms</button>
-          <button class="ob" onclick="saleToggleCat('jeans',this)">Jeans</button>
-          <button class="ob" onclick="saleToggleCat('outerwear',this)">Outerwear</button>
-          <button class="ob" onclick="saleToggleCat('accessories',this)">Accessories</button>
-        </div>
-
         <label>Size — Tops</label>
         <div class="og" id="saleSizeTops">
           <button class="ob" onclick="salePick('saleSizeTops','XXS',this)">XXS</button>
@@ -1325,27 +1315,6 @@ function salePick(groupId,value,el){
   }
 }
 
-function saleToggleCat(cat,el){
-  if(cat==='all'){
-    var bs=document.querySelectorAll('#saleCats .ob');
-    for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
-    el.classList.add('on');
-    salePrefs.categories=['all'];
-    return;
-  }
-  var allBtn=document.querySelector('#saleCats .ob');
-  if(allBtn)allBtn.classList.remove('on');
-  salePrefs.categories=salePrefs.categories.filter(function(c){return c!=='all';});
-  if(el.classList.contains('on')){
-    el.classList.remove('on');
-    salePrefs.categories=salePrefs.categories.filter(function(c){return c!==cat;});
-    if(salePrefs.categories.length===0){allBtn.classList.add('on');salePrefs.categories=['all'];}
-  }else{
-    el.classList.add('on');
-    salePrefs.categories.push(cat);
-  }
-}
-
 function applySaleSettingsToUI(data){
   var enabled=data.enabled||false;
   document.getElementById('saleToggle').checked=enabled;
@@ -1355,7 +1324,7 @@ function applySaleSettingsToUI(data){
   if(data.prefs){
     salePrefs={
       region:data.prefs.region||'es',gender:data.prefs.gender||'men',
-      categories:data.prefs.categories||['all'],
+      categories:['all'],
       size_tops:Array.isArray(data.prefs.size_tops)?data.prefs.size_tops:data.prefs.size_tops?[data.prefs.size_tops]:['M'],
       size_bottoms:Array.isArray(data.prefs.size_bottoms)?data.prefs.size_bottoms:data.prefs.size_bottoms?[data.prefs.size_bottoms]:['M'],
       size_jeans:Array.isArray(data.prefs.size_jeans)?data.prefs.size_jeans:data.prefs.size_jeans?[data.prefs.size_jeans]:['32']
@@ -1363,8 +1332,6 @@ function applySaleSettingsToUI(data){
     document.getElementById('saleRegion').value=salePrefs.region;
     var gBtns=document.querySelectorAll('#saleGender .ob');
     for(var i=0;i<gBtns.length;i++)gBtns[i].classList.toggle('on',gBtns[i].textContent.toLowerCase()===salePrefs.gender);
-    var cBtns=document.querySelectorAll('#saleCats .ob');
-    for(var i=0;i<cBtns.length;i++){var catVal=cBtns[i].textContent.toLowerCase();cBtns[i].classList.toggle('on',salePrefs.categories.indexOf(catVal)!==-1);}
     setSaleMultiGroup('saleSizeTops',salePrefs.size_tops);
     setSaleMultiGroup('saleSizeBottoms',salePrefs.size_bottoms);
     setSaleMultiGroup('saleSizeJeans',salePrefs.size_jeans);
