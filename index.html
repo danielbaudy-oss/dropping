@@ -78,6 +78,13 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 @keyframes spin{to{transform:rotate(360deg)}}
 .refreshbtn{background:none;border:1px solid #d1d5db;color:#888;font-size:11px;padding:4px 10px;border-radius:6px;cursor:pointer;margin-left:auto}
 .refreshbtn:hover{color:#FF0000;border-color:#FF0000}
+.toggle{position:relative;display:inline-block;width:44px;height:24px}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:24px;transition:.3s}
+.slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle input:checked+.slider{background:#FF0000}
+.toggle input:checked+.slider:before{transform:translateX(20px)}
+  
 </style>
 </head>
 <body>
@@ -186,6 +193,102 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <input type="text" id="cid" placeholder="Your Chat ID number">
       <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
       <div id="tst" class="hd"></div>
+    </div>
+
+    <div class="sec">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="3" fill="#FF0000"/><text x="12" y="16.5" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff" font-family="sans-serif">SALE</text></svg>
+          <h2 style="margin:0">Uniqlo sale alerts</h2>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="saleToggle" onchange="onSaleToggle()">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <p style="font-size:12px;color:#888;margin-top:6px">Get notified when new items are added to Uniqlo's sale page</p>
+
+      <div id="saleFilters" class="hd" style="margin-top:14px">
+        <label>Region</label>
+        <select id="saleRegion">
+          <option value="es">Spain</option>
+          <option value="uk">United Kingdom</option>
+          <option value="de">Germany</option>
+          <option value="fr">France</option>
+          <option value="it">Italy</option>
+          <option value="us">United States</option>
+          <option value="nl">Netherlands</option>
+          <option value="be">Belgium</option>
+          <option value="se">Sweden</option>
+          <option value="dk">Denmark</option>
+          <option value="pl">Poland</option>
+        </select>
+
+        <label>Gender</label>
+        <div class="og" id="saleGender">
+          <button class="ob on" onclick="salePick('saleGender','men',this)">Men</button>
+          <button class="ob" onclick="salePick('saleGender','women',this)">Women</button>
+          <button class="ob" onclick="salePick('saleGender','both',this)">Both</button>
+        </div>
+
+        <label>Categories</label>
+        <div class="og" id="saleCats">
+          <button class="ob on" onclick="saleToggleCat('all',this)">All</button>
+          <button class="ob" onclick="saleToggleCat('tops',this)">Tops</button>
+          <button class="ob" onclick="saleToggleCat('bottoms',this)">Bottoms</button>
+          <button class="ob" onclick="saleToggleCat('jeans',this)">Jeans</button>
+          <button class="ob" onclick="saleToggleCat('outerwear',this)">Outerwear</button>
+          <button class="ob" onclick="saleToggleCat('accessories',this)">Accessories</button>
+        </div>
+
+        <label>Size — Tops</label>
+        <div class="og" id="saleSizeTops">
+          <button class="ob" onclick="salePick('saleSizeTops','XXS',this)">XXS</button>
+          <button class="ob" onclick="salePick('saleSizeTops','XS',this)">XS</button>
+          <button class="ob" onclick="salePick('saleSizeTops','S',this)">S</button>
+          <button class="ob on" onclick="salePick('saleSizeTops','M',this)">M</button>
+          <button class="ob" onclick="salePick('saleSizeTops','L',this)">L</button>
+          <button class="ob" onclick="salePick('saleSizeTops','XL',this)">XL</button>
+          <button class="ob" onclick="salePick('saleSizeTops','XXL',this)">XXL</button>
+          <button class="ob" onclick="salePick('saleSizeTops','3XL',this)">3XL</button>
+        </div>
+
+        <label>Size — Bottoms</label>
+        <div class="og" id="saleSizeBottoms">
+          <button class="ob" onclick="salePick('saleSizeBottoms','XXS',this)">XXS</button>
+          <button class="ob" onclick="salePick('saleSizeBottoms','XS',this)">XS</button>
+          <button class="ob" onclick="salePick('saleSizeBottoms','S',this)">S</button>
+          <button class="ob on" onclick="salePick('saleSizeBottoms','M',this)">M</button>
+          <button class="ob" onclick="salePick('saleSizeBottoms','L',this)">L</button>
+          <button class="ob" onclick="salePick('saleSizeBottoms','XL',this)">XL</button>
+          <button class="ob" onclick="salePick('saleSizeBottoms','XXL',this)">XXL</button>
+        </div>
+
+        <label>Size — Jeans (waist)</label>
+        <div class="og" id="saleSizeJeans">
+          <button class="ob" onclick="salePick('saleSizeJeans','28',this)">28</button>
+          <button class="ob" onclick="salePick('saleSizeJeans','29',this)">29</button>
+          <button class="ob" onclick="salePick('saleSizeJeans','30',this)">30</button>
+          <button class="ob" onclick="salePick('saleSizeJeans','31',this)">31</button>
+          <button class="ob on" onclick="salePick('saleSizeJeans','32',this)">32</button>
+          <button class="ob" onclick="salePick('saleSizeJeans','33',this)">33</button>
+          <button class="ob" onclick="salePick('saleSizeJeans','34',this)">34</button>
+          <button class="ob" onclick="salePick('saleSizeJeans','36',this)">36</button>
+        </div>
+
+        <label>Minimum discount</label>
+        <select id="saleMinDiscount">
+          <option value="0">Any discount</option>
+          <option value="10">At least 10%</option>
+          <option value="20">At least 20%</option>
+          <option value="30">At least 30%</option>
+          <option value="40">At least 40%</option>
+          <option value="50">At least 50%</option>
+        </select>
+
+        <button class="btn bblk" id="saleSaveBtn" onclick="saveSaleSettings()" style="margin-top:14px">Save sale preferences</button>
+        <div id="saleSt" class="hd"></div>
+      </div>
     </div>
   </div>
 </div>
