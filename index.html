@@ -198,8 +198,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
        <div class="sec">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:10px">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="1" y="1" width="26" height="26" rx="4" fill="#fff" stroke="#FF0000" stroke-width="2.5"/><text x="14" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#FF0000" font-family="sans-serif" letter-spacing="0.3">SALE</text></svg>
-          <h2 style="margin:0">Uniqlo sale alerts</h2>
+<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="0" y="0" width="28" height="28" rx="4" fill="#FF0000"/><text x="14" y="18" text-anchor="middle" font-size="8.5" font-weight="800" fill="#fff" font-family="sans-serif" letter-spacing="0.5">SALE</text></svg>          <h2 style="margin:0">Uniqlo sale alerts</h2>
         </div>
         <label class="toggle" id="saleToggleWrap" style="visibility:hidden">
           <input type="checkbox" id="saleToggle" onchange="onSaleToggle()">
@@ -228,14 +227,14 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
 
         <label>Gender</label>
         <div class="og" id="saleGender">
-          <button class="ob on" onclick="salePick('saleGender','men',this)">Men</button>
+          <button class="ob" onclick="salePick('saleGender','men',this)">Men</button>
           <button class="ob" onclick="salePick('saleGender','women',this)">Women</button>
           <button class="ob" onclick="salePick('saleGender','both',this)">Both</button>
         </div>
 
         <label>Categories</label>
         <div class="og" id="saleCats">
-          <button class="ob on" onclick="saleToggleCat('all',this)">All</button>
+          <button class="ob" onclick="saleToggleCat('all',this)">All</button>
           <button class="ob" onclick="saleToggleCat('tops',this)">Tops</button>
           <button class="ob" onclick="saleToggleCat('bottoms',this)">Bottoms</button>
           <button class="ob" onclick="saleToggleCat('jeans',this)">Jeans</button>
@@ -248,7 +247,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
           <button class="ob" onclick="salePick('saleSizeTops','XXS',this)">XXS</button>
           <button class="ob" onclick="salePick('saleSizeTops','XS',this)">XS</button>
           <button class="ob" onclick="salePick('saleSizeTops','S',this)">S</button>
-          <button class="ob on" onclick="salePick('saleSizeTops','M',this)">M</button>
+          <button class="ob" onclick="salePick('saleSizeTops','M',this)">M</button>
           <button class="ob" onclick="salePick('saleSizeTops','L',this)">L</button>
           <button class="ob" onclick="salePick('saleSizeTops','XL',this)">XL</button>
           <button class="ob" onclick="salePick('saleSizeTops','XXL',this)">XXL</button>
@@ -260,7 +259,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
           <button class="ob" onclick="salePick('saleSizeBottoms','XXS',this)">XXS</button>
           <button class="ob" onclick="salePick('saleSizeBottoms','XS',this)">XS</button>
           <button class="ob" onclick="salePick('saleSizeBottoms','S',this)">S</button>
-          <button class="ob on" onclick="salePick('saleSizeBottoms','M',this)">M</button>
+          <button class="ob" onclick="salePick('saleSizeBottoms','M',this)">M</button>
           <button class="ob" onclick="salePick('saleSizeBottoms','L',this)">L</button>
           <button class="ob" onclick="salePick('saleSizeBottoms','XL',this)">XL</button>
           <button class="ob" onclick="salePick('saleSizeBottoms','XXL',this)">XXL</button>
@@ -272,7 +271,7 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
           <button class="ob" onclick="salePick('saleSizeJeans','29',this)">29</button>
           <button class="ob" onclick="salePick('saleSizeJeans','30',this)">30</button>
           <button class="ob" onclick="salePick('saleSizeJeans','31',this)">31</button>
-          <button class="ob on" onclick="salePick('saleSizeJeans','32',this)">32</button>
+          <button class="ob" onclick="salePick('saleSizeJeans','32',this)">32</button>
           <button class="ob" onclick="salePick('saleSizeJeans','33',this)">33</button>
           <button class="ob" onclick="salePick('saleSizeJeans','34',this)">34</button>
           <button class="ob" onclick="salePick('saleSizeJeans','36',this)">36</button>
@@ -1298,7 +1297,7 @@ function testTg(){
 function sst(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
 /* ====== SALE ALERTS ====== */
 
-var salePrefs={region:'es',gender:'men',categories:['all'],size_tops:'M',size_bottoms:'M',size_jeans:'32'};
+var salePrefs={region:'es',gender:'men',categories:['all'],size_tops:['M'],size_bottoms:['M'],size_jeans:['32']};
 var saleSettingsLoaded=false;
 
 function onSaleToggle(){
@@ -1308,13 +1307,23 @@ function onSaleToggle(){
 }
 
 function salePick(groupId,value,el){
-  var bs=document.querySelectorAll('#'+groupId+' .ob');
-  for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
-  el.classList.add('on');
-  if(groupId==='saleGender')salePrefs.gender=value;
-  else if(groupId==='saleSizeTops')salePrefs.size_tops=value;
-  else if(groupId==='saleSizeBottoms')salePrefs.size_bottoms=value;
-  else if(groupId==='saleSizeJeans')salePrefs.size_jeans=value;
+  if(groupId==='saleGender'){
+    var bs=document.querySelectorAll('#'+groupId+' .ob');
+    for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
+    el.classList.add('on');
+    salePrefs.gender=value;
+    return;
+  }
+  // Size groups: multi-select toggle
+  var field=groupId==='saleSizeTops'?'size_tops':groupId==='saleSizeBottoms'?'size_bottoms':'size_jeans';
+  if(!Array.isArray(salePrefs[field]))salePrefs[field]=salePrefs[field]?[salePrefs[field]]:[];
+  if(el.classList.contains('on')){
+    el.classList.remove('on');
+    salePrefs[field]=salePrefs[field].filter(function(v){return v!==value;});
+  }else{
+    el.classList.add('on');
+    salePrefs[field].push(value);
+  }
 }
 
 function saleToggleCat(cat,el){
@@ -1348,17 +1357,18 @@ function applySaleSettingsToUI(data){
     salePrefs={
       region:data.prefs.region||'es',gender:data.prefs.gender||'men',
       categories:data.prefs.categories||['all'],
-      size_tops:data.prefs.size_tops||'M',size_bottoms:data.prefs.size_bottoms||'M',
-      size_jeans:data.prefs.size_jeans||'32'
+      size_tops:Array.isArray(data.prefs.size_tops)?data.prefs.size_tops:data.prefs.size_tops?[data.prefs.size_tops]:['M'],
+      size_bottoms:Array.isArray(data.prefs.size_bottoms)?data.prefs.size_bottoms:data.prefs.size_bottoms?[data.prefs.size_bottoms]:['M'],
+      size_jeans:Array.isArray(data.prefs.size_jeans)?data.prefs.size_jeans:data.prefs.size_jeans?[data.prefs.size_jeans]:['32']
     };
     document.getElementById('saleRegion').value=salePrefs.region;
     var gBtns=document.querySelectorAll('#saleGender .ob');
     for(var i=0;i<gBtns.length;i++)gBtns[i].classList.toggle('on',gBtns[i].textContent.toLowerCase()===salePrefs.gender);
     var cBtns=document.querySelectorAll('#saleCats .ob');
     for(var i=0;i<cBtns.length;i++){var catVal=cBtns[i].textContent.toLowerCase();cBtns[i].classList.toggle('on',salePrefs.categories.indexOf(catVal)!==-1);}
-    setSalePickGroup('saleSizeTops',salePrefs.size_tops);
-    setSalePickGroup('saleSizeBottoms',salePrefs.size_bottoms);
-    setSalePickGroup('saleSizeJeans',salePrefs.size_jeans);
+    setSaleMultiGroup('saleSizeTops',salePrefs.size_tops);
+    setSaleMultiGroup('saleSizeBottoms',salePrefs.size_bottoms);
+    setSaleMultiGroup('saleSizeJeans',salePrefs.size_jeans);
   }else{
     document.getElementById('saleToggleWrap').style.visibility='visible';
     document.getElementById('saleLoading').style.display='none';
@@ -1412,9 +1422,10 @@ function loadSaleSettings(){
   });
 }
 
-function setSalePickGroup(groupId,value){
+function setSaleMultiGroup(groupId,values){
+  if(!Array.isArray(values))values=values?[values]:[];
   var bs=document.querySelectorAll('#'+groupId+' .ob');
-  for(var i=0;i<bs.length;i++)bs[i].classList.toggle('on',bs[i].textContent===value);
+  for(var i=0;i<bs.length;i++)bs[i].classList.toggle('on',values.indexOf(bs[i].textContent)!==-1);
 }
 /* ====== INIT ====== */
 if(CID){
