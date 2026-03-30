@@ -642,8 +642,7 @@ function normaliseMangoClient(productData,priceData,stockData,parsed,curInfo){
 /* ====== UNIQLO CLIENT-SIDE API FETCH ====== */
 
 var UQ_LANGS={'es':'en','eu':'en','uk':'en','us':'en','de':'de','fr':'fr','jp':'ja','it':'it','nl':'en','be':'en','pt':'en','se':'en','dk':'en','pl':'en'};
-var UQ_CLIENTS={'es':'uq.es.web-spa','eu':'uq.eu.web-spa','de':'uq.de.web-spa','fr':'uq.fr.web-spa','uk':'uq.uk.web-spa','us':'uq.us.web-spa','jp':'uq.jp.web-spa','it':'uq.it.web-spa'};
-
+var UQ_CLIENTS={'es':'uq.es.web-spa','eu':'uq.eu.web-spa','de':'uq.de.web-spa','fr':'uq.fr.web-spa','uk':'uq.gb.web-spa','us':'uq.us.web-spa','jp':'uq.jp.web-spa','it':'uq.it.web-spa'};
 function fetchUniqloClientSide(url){
   var parsed=parseUniqloUrlJS(url);if(!parsed)return Promise.reject('Invalid URL');
   var lang=UQ_LANGS[parsed.region]||'en';var cn=parsed.productCode.replace('E','').replace('-000','');
