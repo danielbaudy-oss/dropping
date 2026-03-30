@@ -195,16 +195,20 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <div id="tst" class="hd"></div>
     </div>
 
-    <div class="sec">
+       <div class="sec">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:10px">
-<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="1" y="1" width="26" height="26" rx="4" fill="#fff" stroke="#FF0000" stroke-width="2.5"/><text x="14" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#FF0000" font-family="sans-serif" letter-spacing="0.3">SALE</text></svg>        </div>
-        <label class="toggle">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="1" y="1" width="26" height="26" rx="4" fill="#fff" stroke="#FF0000" stroke-width="2.5"/><text x="14" y="18" text-anchor="middle" font-size="9" font-weight="800" fill="#FF0000" font-family="sans-serif" letter-spacing="0.3">SALE</text></svg>
+          <h2 style="margin:0">Uniqlo sale alerts</h2>
+        </div>
+        <label class="toggle" id="saleToggleWrap" style="visibility:hidden">
           <input type="checkbox" id="saleToggle" onchange="onSaleToggle()">
           <span class="slider"></span>
         </label>
       </div>
       <p style="font-size:12px;color:#888;margin-top:6px">Get notified when new items are added to Uniqlo's sale page</p>
+
+      <div id="saleLoading" style="text-align:center;padding:16px"><div class="loader"></div></div>
 
       <div id="saleFilters" class="hd" style="margin-top:14px">
         <label>Region</label>
@@ -273,16 +277,6 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
           <button class="ob" onclick="salePick('saleSizeJeans','34',this)">34</button>
           <button class="ob" onclick="salePick('saleSizeJeans','36',this)">36</button>
         </div>
-
-        <label>Minimum discount</label>
-        <select id="saleMinDiscount">
-          <option value="0">Any discount</option>
-          <option value="10">At least 10%</option>
-          <option value="20">At least 20%</option>
-          <option value="30">At least 30%</option>
-          <option value="40">At least 40%</option>
-          <option value="50">At least 50%</option>
-        </select>
 
         <button class="btn bblk" id="saleSaveBtn" onclick="saveSaleSettings()" style="margin-top:14px">Save sale preferences</button>
         <div id="saleSt" class="hd"></div>
@@ -1304,7 +1298,8 @@ function testTg(){
 function sst(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
 /* ====== SALE ALERTS ====== */
 
-var salePrefs={region:'es',gender:'men',categories:['all'],size_tops:'M',size_bottoms:'M',size_jeans:'32',minDiscount:0};
+var salePrefs={region:'es',gender:'men',categories:['all'],size_tops:'M',size_bottoms:'M',size_jeans:'32'};
+var saleSettingsLoaded=false;
 
 function onSaleToggle(){
   var on=document.getElementById('saleToggle').checked;
@@ -1343,18 +1338,46 @@ function saleToggleCat(cat,el){
   }
 }
 
+function applySaleSettingsToUI(data){
+  var enabled=data.enabled||false;
+  document.getElementById('saleToggle').checked=enabled;
+  document.getElementById('saleToggleWrap').style.visibility='visible';
+  document.getElementById('saleLoading').style.display='none';
+  document.getElementById('saleFilters').classList.toggle('hd',!enabled);
+  if(data.prefs){
+    salePrefs={
+      region:data.prefs.region||'es',gender:data.prefs.gender||'men',
+      categories:data.prefs.categories||['all'],
+      size_tops:data.prefs.size_tops||'M',size_bottoms:data.prefs.size_bottoms||'M',
+      size_jeans:data.prefs.size_jeans||'32'
+    };
+    document.getElementById('saleRegion').value=salePrefs.region;
+    var gBtns=document.querySelectorAll('#saleGender .ob');
+    for(var i=0;i<gBtns.length;i++)gBtns[i].classList.toggle('on',gBtns[i].textContent.toLowerCase()===salePrefs.gender);
+    var cBtns=document.querySelectorAll('#saleCats .ob');
+    for(var i=0;i<cBtns.length;i++){var catVal=cBtns[i].textContent.toLowerCase();cBtns[i].classList.toggle('on',salePrefs.categories.indexOf(catVal)!==-1);}
+    setSalePickGroup('saleSizeTops',salePrefs.size_tops);
+    setSalePickGroup('saleSizeBottoms',salePrefs.size_bottoms);
+    setSalePickGroup('saleSizeJeans',salePrefs.size_jeans);
+  }else{
+    document.getElementById('saleToggleWrap').style.visibility='visible';
+    document.getElementById('saleLoading').style.display='none';
+  }
+}
+
 function saveSaleSettings(){
   if(!CID){sst('saleSt','Connect Telegram first','se');return;}
   var btn=document.getElementById('saleSaveBtn');
   btn.disabled=true;btn.textContent='Saving...';
   salePrefs.region=document.getElementById('saleRegion').value;
-  salePrefs.minDiscount=parseInt(document.getElementById('saleMinDiscount').value)||0;
   var enabled=document.getElementById('saleToggle').checked;
-  api({action:'saveSaleSettings',cid:CID,enabled:String(enabled),sp:JSON.stringify(salePrefs)}).then(function(r){
+  var payload={action:'saveSaleSettings',cid:CID,enabled:String(enabled),sp:JSON.stringify(salePrefs)};
+  api(payload).then(function(r){
     btn.disabled=false;
     if(r.error){btn.textContent='Save sale preferences';sst('saleSt',r.error,'se');return;}
     btn.textContent='Saved!';btn.classList.add('btn-saved');
     sst('saleSt','Sale alert preferences saved','so');
+    try{localStorage.setItem('uq_sale',JSON.stringify({enabled:enabled,prefs:salePrefs}));}catch(e){}
     setTimeout(function(){btn.textContent='Save sale preferences';btn.classList.remove('btn-saved');},1500);
   }).catch(function(){
     btn.disabled=false;btn.textContent='Save sale preferences';
@@ -1363,30 +1386,30 @@ function saveSaleSettings(){
 }
 
 function loadSaleSettings(){
-  if(!CID)return;
+  if(!CID){
+    document.getElementById('saleLoading').style.display='none';
+    document.getElementById('saleToggleWrap').style.visibility='visible';
+    return;
+  }
+  // Instant: load from localStorage cache
+  var cached=null;
+  try{var raw=localStorage.getItem('uq_sale');if(raw)cached=JSON.parse(raw);}catch(e){}
+  if(cached){
+    applySaleSettingsToUI(cached);
+    saleSettingsLoaded=true;
+  }
+  // Background: fetch fresh from server
   api({action:'getSaleSettings',cid:CID}).then(function(r){
-    if(!r)return;
-    var enabled=r.enabled||false;
-    document.getElementById('saleToggle').checked=enabled;
-    document.getElementById('saleFilters').classList.toggle('hd',!enabled);
-    if(r.prefs){
-      salePrefs={
-        region:r.prefs.region||'es',gender:r.prefs.gender||'men',
-        categories:r.prefs.categories||['all'],
-        size_tops:r.prefs.size_tops||'M',size_bottoms:r.prefs.size_bottoms||'M',
-        size_jeans:r.prefs.size_jeans||'32',minDiscount:r.prefs.minDiscount||0
-      };
-      document.getElementById('saleRegion').value=salePrefs.region;
-      document.getElementById('saleMinDiscount').value=String(salePrefs.minDiscount);
-      var gBtns=document.querySelectorAll('#saleGender .ob');
-      for(var i=0;i<gBtns.length;i++)gBtns[i].classList.toggle('on',gBtns[i].textContent.toLowerCase()===salePrefs.gender);
-      var cBtns=document.querySelectorAll('#saleCats .ob');
-      for(var i=0;i<cBtns.length;i++){var catVal=cBtns[i].textContent.toLowerCase();cBtns[i].classList.toggle('on',salePrefs.categories.indexOf(catVal)!==-1);}
-      setSalePickGroup('saleSizeTops',salePrefs.size_tops);
-      setSalePickGroup('saleSizeBottoms',salePrefs.size_bottoms);
-      setSalePickGroup('saleSizeJeans',salePrefs.size_jeans);
+    if(!r||r.error)return;
+    try{localStorage.setItem('uq_sale',JSON.stringify(r));}catch(e){}
+    applySaleSettingsToUI(r);
+    saleSettingsLoaded=true;
+  }).catch(function(){
+    if(!saleSettingsLoaded){
+      document.getElementById('saleLoading').style.display='none';
+      document.getElementById('saleToggleWrap').style.visibility='visible';
     }
-  }).catch(function(){});
+  });
 }
 
 function setSalePickGroup(groupId,value){
