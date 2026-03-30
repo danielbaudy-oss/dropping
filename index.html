@@ -694,8 +694,7 @@ function normaliseUniqloClient(data,parsed,cn){
 }
 
 /* ====== NAVIGATION ====== */
-function goSet(){document.getElementById('home').style.display='none';document.getElementById('mainHdr').style.display='none';document.getElementById('set').classList.add('on');}
-function goHome(){document.getElementById('set').classList.remove('on');document.getElementById('home').style.display='block';document.getElementById('mainHdr').style.display='flex';if(cachedProducts!==null)renderP(cachedProducts);}
+function goSet(){document.getElementById('home').style.display='none';document.getElementById('mainHdr').style.display='none';document.getElementById('set').classList.add('on');loadSaleSettings();}function goHome(){document.getElementById('set').classList.remove('on');document.getElementById('home').style.display='block';document.getElementById('mainHdr').style.display='flex';if(cachedProducts!==null)renderP(cachedProducts);}
 function openAdd(){document.getElementById('addModal').classList.add('on');document.getElementById('aurl').value='';document.getElementById('psec').classList.add('hd');document.getElementById('ast').classList.add('hd');selColor='';selSize='';cProd=null;cParsed=null;}
 function closeAdd(){document.getElementById('addModal').classList.remove('on');}
 function closeAddBg(e){if(e.target===document.getElementById('addModal'))closeAdd();}
@@ -1305,7 +1304,97 @@ function testTg(){
 }
 
 function sst(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
+/* ====== SALE ALERTS ====== */
 
+var salePrefs={region:'es',gender:'men',categories:['all'],size_tops:'M',size_bottoms:'M',size_jeans:'32',minDiscount:0};
+
+function onSaleToggle(){
+  var on=document.getElementById('saleToggle').checked;
+  document.getElementById('saleFilters').classList.toggle('hd',!on);
+  if(!on)saveSaleSettings();
+}
+
+function salePick(groupId,value,el){
+  var bs=document.querySelectorAll('#'+groupId+' .ob');
+  for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
+  el.classList.add('on');
+  if(groupId==='saleGender')salePrefs.gender=value;
+  else if(groupId==='saleSizeTops')salePrefs.size_tops=value;
+  else if(groupId==='saleSizeBottoms')salePrefs.size_bottoms=value;
+  else if(groupId==='saleSizeJeans')salePrefs.size_jeans=value;
+}
+
+function saleToggleCat(cat,el){
+  if(cat==='all'){
+    var bs=document.querySelectorAll('#saleCats .ob');
+    for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
+    el.classList.add('on');
+    salePrefs.categories=['all'];
+    return;
+  }
+  var allBtn=document.querySelector('#saleCats .ob');
+  if(allBtn)allBtn.classList.remove('on');
+  salePrefs.categories=salePrefs.categories.filter(function(c){return c!=='all';});
+  if(el.classList.contains('on')){
+    el.classList.remove('on');
+    salePrefs.categories=salePrefs.categories.filter(function(c){return c!==cat;});
+    if(salePrefs.categories.length===0){allBtn.classList.add('on');salePrefs.categories=['all'];}
+  }else{
+    el.classList.add('on');
+    salePrefs.categories.push(cat);
+  }
+}
+
+function saveSaleSettings(){
+  if(!CID){sst('saleSt','Connect Telegram first','se');return;}
+  var btn=document.getElementById('saleSaveBtn');
+  btn.disabled=true;btn.textContent='Saving...';
+  salePrefs.region=document.getElementById('saleRegion').value;
+  salePrefs.minDiscount=parseInt(document.getElementById('saleMinDiscount').value)||0;
+  var enabled=document.getElementById('saleToggle').checked;
+  api({action:'saveSaleSettings',cid:CID,enabled:String(enabled),sp:JSON.stringify(salePrefs)}).then(function(r){
+    btn.disabled=false;
+    if(r.error){btn.textContent='Save sale preferences';sst('saleSt',r.error,'se');return;}
+    btn.textContent='Saved!';btn.classList.add('btn-saved');
+    sst('saleSt','Sale alert preferences saved','so');
+    setTimeout(function(){btn.textContent='Save sale preferences';btn.classList.remove('btn-saved');},1500);
+  }).catch(function(){
+    btn.disabled=false;btn.textContent='Save sale preferences';
+    sst('saleSt','Failed to save','se');
+  });
+}
+
+function loadSaleSettings(){
+  if(!CID)return;
+  api({action:'getSaleSettings',cid:CID}).then(function(r){
+    if(!r)return;
+    var enabled=r.enabled||false;
+    document.getElementById('saleToggle').checked=enabled;
+    document.getElementById('saleFilters').classList.toggle('hd',!enabled);
+    if(r.prefs){
+      salePrefs={
+        region:r.prefs.region||'es',gender:r.prefs.gender||'men',
+        categories:r.prefs.categories||['all'],
+        size_tops:r.prefs.size_tops||'M',size_bottoms:r.prefs.size_bottoms||'M',
+        size_jeans:r.prefs.size_jeans||'32',minDiscount:r.prefs.minDiscount||0
+      };
+      document.getElementById('saleRegion').value=salePrefs.region;
+      document.getElementById('saleMinDiscount').value=String(salePrefs.minDiscount);
+      var gBtns=document.querySelectorAll('#saleGender .ob');
+      for(var i=0;i<gBtns.length;i++)gBtns[i].classList.toggle('on',gBtns[i].textContent.toLowerCase()===salePrefs.gender);
+      var cBtns=document.querySelectorAll('#saleCats .ob');
+      for(var i=0;i<cBtns.length;i++){var catVal=cBtns[i].textContent.toLowerCase();cBtns[i].classList.toggle('on',salePrefs.categories.indexOf(catVal)!==-1);}
+      setSalePickGroup('saleSizeTops',salePrefs.size_tops);
+      setSalePickGroup('saleSizeBottoms',salePrefs.size_bottoms);
+      setSalePickGroup('saleSizeJeans',salePrefs.size_jeans);
+    }
+  }).catch(function(){});
+}
+
+function setSalePickGroup(groupId,value){
+  var bs=document.querySelectorAll('#'+groupId+' .ob');
+  for(var i=0;i<bs.length;i++)bs[i].classList.toggle('on',bs[i].textContent===value);
+}
 /* ====== INIT ====== */
 if(CID){
   document.getElementById('cid').value=CID;
