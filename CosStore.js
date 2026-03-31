@@ -16,6 +16,7 @@ var COS_CURRENCY_MAP = {
   'fr-fr': { code: 'EUR', symbol: '€' },
   'it-it': { code: 'EUR', symbol: '€' },
   'es-es': { code: 'EUR', symbol: '€' },
+  'en-gb': { code: 'GBP', symbol: '£' },
   'sv-se': { code: 'SEK', symbol: 'kr' },
   'pl-pl': { code: 'PLN', symbol: 'zł' },
   'en-dk': { code: 'DKK', symbol: 'kr' },

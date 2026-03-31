@@ -122,7 +122,16 @@ function getUserSecret(chatId) {
 }
 
 function verifyAuth(chatId, secret) {
-  if (!chatId || !secret) return false;
+  if (!chatId) return false;
+  
+  // If no secret provided, check if user exists at all
+  // This allows existing users to keep working until they reconnect
+  if (!secret) {
+    var user = getUser(chatId);
+    if (user && !user.api_secret) return true; // legacy user, no secret set yet
+    return false;
+  }
+  
   var stored = getUserSecret(chatId);
   return stored && stored === secret;
 }
@@ -351,19 +360,16 @@ function cleanupOldHistory() {
   var cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 90); // keep 90 days
 
-  var keep = [d[0]]; // header
-  for (var i = 1; i < d.length; i++) {
+  var rowsToDelete = [];
+  for (var i = d.length - 1; i >= 1; i--) {
     var ts = d[i][4];
-    if (!ts || new Date(ts) >= cutoff) keep.push(d[i]);
+    if (ts && new Date(ts) < cutoff) rowsToDelete.push(i + 1);
   }
 
-  var removed = d.length - keep.length;
-  if (removed > 0) {
-    s.clearContents();
-    if (keep.length > 0) {
-      s.getRange(1, 1, keep.length, keep[0].length).setValues(keep);
-    }
+  // Delete from bottom up so row indices stay valid
+  for (var i = 0; i < rowsToDelete.length; i++) {
+    s.deleteRow(rowsToDelete[i]);
   }
 
-  Logger.log('Cleanup: removed ' + removed + ' old history rows');
+  Logger.log('Cleanup: removed ' + rowsToDelete.length + ' old history rows');
 }

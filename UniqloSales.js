@@ -219,8 +219,10 @@ function saleItemMatchesFilter(item, filter) {
     for (var s = 0; s < item.sizes.length; s++) {
       var sc = item.sizes[s].code;
       var sn = item.sizes[s].name;
-      // Match "One Size" to anything
+      // "One Size" always passes
       if (sn === 'One Size' || sc === '999') { hasMatchingSize = true; break; }
+      // Must be in stock AND match a user size
+      if (!item.sizes[s].inStock) continue;
       for (var f = 0; f < filter.sizes.length; f++) {
         var fs = filter.sizes[f];
         if (sc === fs || sn === fs || SALE_SIZE_MAP[sc] === fs || SIZE_NAMES[sc] === fs) {
@@ -234,6 +236,39 @@ function saleItemMatchesFilter(item, filter) {
   }
 
   return true;
+}
+
+/* Returns only the user's sizes that are in stock, for use in notifications.
+   For accessories/one-size/unfiltered categories, returns all in-stock sizes. */
+function getRelevantSizes(item, filter) {
+  if (!item.sizes || item.sizes.length === 0) return [];
+
+  var skipSizeFilter = (item.category === 'accessories' || item.category === 'other');
+  var result = [];
+
+  for (var s = 0; s < item.sizes.length; s++) {
+    var sz = item.sizes[s];
+    if (!sz.inStock) continue;
+
+    var sc = sz.code;
+    var sn = sz.name;
+
+    // One Size — always include
+    if (sn === 'One Size' || sc === '999') { result.push(sz); continue; }
+
+    // No filter or skip filter — include all in-stock
+    if (skipSizeFilter || !filter.sizes || filter.sizes.length === 0) { result.push(sz); continue; }
+
+    // Check if this size matches user's filter
+    for (var f = 0; f < filter.sizes.length; f++) {
+      var fs = filter.sizes[f];
+      if (sc === fs || sn === fs || SALE_SIZE_MAP[sc] === fs || SIZE_NAMES[sc] === fs) {
+        result.push(sz);
+        break;
+      }
+    }
+  }
+  return result;
 }
 
 function buildSizeFilters(prefs) {
@@ -418,13 +453,13 @@ function checkUniqloSales() {
 
       if (matching.length <= 5) {
         for (var m = 0; m < matching.length; m++) {
-          sendSaleAlert(sub.chat_id, matching[m]);
+          sendSaleAlert(sub.chat_id, matching[m], filter);
           Utilities.sleep(300);
         }
       } else {
         sendSaleSummary(sub.chat_id, matching, group.gender, group.region);
         for (var m = 0; m < Math.min(matching.length, 8); m++) {
-          sendSaleAlert(sub.chat_id, matching[m]);
+          sendSaleAlert(sub.chat_id, matching[m], filter);
           Utilities.sleep(300);
         }
       }
@@ -438,22 +473,19 @@ function checkUniqloSales() {
    NOTIFICATIONS
    ============================ */
 
-function sendSaleAlert(chatId, item) {
+function sendSaleAlert(chatId, item, filter) {
   var s = item.currencySymbol || '€';
   var text = '🏷 *NEW ON SALE*\n\n' +
     '*' + item.name + '*\n' +
     'Was: ' + s + item.basePrice.toFixed(2) + '\n' +
     '*Now: ' + s + item.salePrice.toFixed(2) + '* (-' + item.discount + '%)\n';
 
-  if (item.sizes && item.sizes.length > 0) {
-    var inStock = [];
-    var oos = [];
-    for (var i = 0; i < item.sizes.length; i++) {
-      if (item.sizes[i].inStock) inStock.push(item.sizes[i].name);
-      else oos.push(item.sizes[i].name);
-    }
-    if (inStock.length > 0) text += '✅ ' + inStock.join(', ') + '\n';
-    if (oos.length > 0) text += '❌ ' + oos.join(', ') + '\n';
+  // Only show the user's relevant in-stock sizes
+  var relevant = filter ? getRelevantSizes(item, filter) : [];
+  if (relevant.length > 0) {
+    var names = [];
+    for (var i = 0; i < relevant.length; i++) names.push(relevant[i].name);
+    text += '✅ ' + names.join(', ') + '\n';
   }
 
   text += '\n[View on Uniqlo](' + item.url + ')';

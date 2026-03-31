@@ -273,9 +273,7 @@ function extractSizesFromHtml(html) {
 }
 
 function detectCategory(name) {
-  var n = (name || '').toLowerCase();
-  var cleaned = n.replace(/short[\s-]*sleeve/g, '');
-  return cleaned.match(/\b(pant|jean|trouser|shorts?\b|chino|skirt|jogger)/) ? 'bottoms' : 'tops';
+  return (name || '').toLowerCase().match(/pant|jean|trouser|short|chino|skirt|jogger/) ? 'bottoms' : 'tops';
 }
 
 function getCurrencyInfo(code, fallback) {
@@ -542,7 +540,7 @@ function extractPriceFromJsonLd(jsonLd) {
    UTILITIES
    ============================ */
 
-/* fetchArketProduct — unused stub removed */
+function fetchArketProduct(productCode, region, colorCode) { return null; }
 
 function buildArketProductUrl(parsed) {
   return 'https://www.arket.com/' + (parsed.languageMarket || 'en-gb') + '/product/' + parsed.slug + '/';

@@ -18,10 +18,5 @@ function sendPhoto(chatId, photoUrl, caption) {
     method: 'post', contentType: 'application/json',
     payload: JSON.stringify(payload), muteHttpExceptions: true
   });
-  var result = JSON.parse(r.getContentText());
-  if (!result.ok) {
-    Logger.log('sendPhoto failed (' + (result.description || 'unknown') + '), falling back to text');
-    return sendMessage(chatId, caption);
-  }
-  return result;
+  return JSON.parse(r.getContentText());
 }
