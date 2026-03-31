@@ -160,7 +160,7 @@ function testArketHtmlDebug() {
   Logger.log('=== ARKET HTML DEBUG ===');
   
   var url = 'https://www.arket.com/en-gb/product/midweight-t-shirt-white-0527611001/';
-  var html = fetchArketHtml(url);
+  var html = hmGroupFetch(url, 'ARKET');
   
   if (!html) {
     Logger.log('❌ Could not fetch HTML');
@@ -172,9 +172,6 @@ function testArketHtmlDebug() {
   Logger.log('Has JSON-LD: ' + (html.indexOf('application/ld+json') !== -1));
   Logger.log('Has og:title: ' + (html.indexOf('og:title') !== -1));
   Logger.log('Has product:price: ' + (html.indexOf('product:price') !== -1));
-  
-  var buildId = extractBuildId(html);
-  Logger.log('Build ID from HTML: ' + (buildId || 'NOT FOUND'));
   
   // Show title
   var title = html.match(/<title[^>]*>([^<]*)<\/title>/i);
@@ -218,35 +215,7 @@ function testPriceCheck() {
   checkAllPrices();
 }
 function testArketBuildId() {
-  Logger.log('=== ARKET BUILD ID TEST ===');
-  clearCachedBuildId();
-  
-  var buildId = getArketBuildId();
-  if (buildId) {
-    Logger.log('✅ Build ID: ' + buildId);
-    
-    Logger.log('Testing _next/data endpoint...');
-    var pp = fetchArketNextDataJson(buildId, 'en-gb', 'midweight-t-shirt-white-0527611001');
-    if (pp) {
-      Logger.log('✅ _next/data returned JSON');
-      try { Logger.log('  Keys: ' + Object.keys(pp).join(', ')); } catch(e) {}
-      
-      var found = findProductInPageProps(pp);
-      if (found) {
-        Logger.log('✅ Product: ' + (found.product.name || 'unnamed'));
-        Logger.log('  Price: ' + (found.product.priceAsNumber || '?'));
-        Logger.log('  SKU: ' + (found.product.sku || '?'));
-        Logger.log('  Items: ' + ((found.product.items || []).length));
-      } else {
-        Logger.log('❌ No product in pageProps');
-        try { Logger.log('  Preview: ' + JSON.stringify(pp).substring(0, 1500)); } catch(e) {}
-      }
-    } else {
-      Logger.log('❌ _next/data returned null');
-    }
-  } else {
-    Logger.log('❌ Could not get build ID');
-  }
+  Logger.log('=== ARKET BUILD ID TEST (deprecated — use testArketFullFetch) ===');
 }
 
 function testArketFullFetch() {
@@ -273,20 +242,20 @@ function testArketUAs() {
   Logger.log('=== TESTING WHICH USER AGENTS WORK ===');
   var url = 'https://www.arket.com/en-gb/';
   
-  for (var i = 0; i < ARKET_USER_AGENTS.length; i++) {
+  for (var i = 0; i < BACKEND_USER_AGENTS.length; i++) {
     try {
       var r = UrlFetchApp.fetch(url, {
         muteHttpExceptions: true,
         followRedirects: true,
         headers: {
-          'User-Agent': ARKET_USER_AGENTS[i],
+          'User-Agent': BACKEND_USER_AGENTS[i],
           'Accept': 'text/html',
           'Accept-Language': 'en-US,en;q=0.9'
         }
       });
       var code = r.getResponseCode();
       var len = r.getContentText().length;
-      Logger.log('UA ' + i + ': HTTP ' + code + ', ' + len + ' chars — ' + ARKET_USER_AGENTS[i].substring(0, 60));
+      Logger.log('UA ' + i + ': HTTP ' + code + ', ' + len + ' chars — ' + BACKEND_USER_AGENTS[i].substring(0, 60));
     } catch(e) {
       Logger.log('UA ' + i + ': ERROR — ' + e.message);
     }
