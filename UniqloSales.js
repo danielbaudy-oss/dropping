@@ -4,7 +4,7 @@
    ============================ */
 
 var SALE_CATEGORY_PATTERNS = {
-  tops: /t-shirt|tee|polo|shirt|blouse|sweater|sweatshirt|hoodie|cardigan|knit|vest|tank|top|fleece|henley|jersey|airism.*crew|heattech.*crew|parka.*sweat|hemd|pullover|oberteil|strick|camiseta|camisa|sudadera|punto|maglia|maglione|felpa/i,
+  tops: /t-shirt|tee|polo|shirt|blouse|sweater|sweatshirt|hoodie|cardigan|knit|vest|tank|top|fleece|henley|jersey|jumper|airism.*crew|heattech.*crew|parka.*sweat|hemd|pullover|oberteil|strick|camiseta|camisa|sudadera|punto|maglia|maglione|felpa/i,
   bottoms: /pant|trouser|chino|jogger|short(?!s?\s*sleeve)|skirt|legging|cargo|sweatpant|hose|rock|pantalon|falda|pantaloni|gonna/i,
   jeans: /jean|denim/i,
   outerwear: /jacket|coat|parka|blazer|gilet|down|windbreaker|anorak|bomber|blouson|overcoat|puffertech|blocktech|jacke|mantel|weste|daunen|chaqueta|abrigo|chaleco|giacca|cappotto|gilet/i,
@@ -211,8 +211,13 @@ function saleItemMatchesFilter(item, filter) {
     if (item.gender !== filter.gender) return false;
   }
 
-  // Size filter — skip for accessories/other (different sizing systems)
-  var skipSizeFilter = (item.category === 'accessories' || item.category === 'other');
+  // Size filter — only skip for items that genuinely have no standard sizing
+  // (accessories with "One Size", or items with no sizes at all)
+  var hasOnlyOneSize = (!item.sizes || item.sizes.length === 0);
+  if (!hasOnlyOneSize && item.sizes) {
+    hasOnlyOneSize = item.sizes.length === 1 && (item.sizes[0].name === 'One Size' || item.sizes[0].code === '999');
+  }
+  var skipSizeFilter = (item.category === 'accessories' && hasOnlyOneSize) || hasOnlyOneSize;
 
   if (!skipSizeFilter && filter.sizes && filter.sizes.length > 0 && item.sizes && item.sizes.length > 0) {
     var hasMatchingSize = false;
@@ -243,7 +248,11 @@ function saleItemMatchesFilter(item, filter) {
 function getRelevantSizes(item, filter) {
   if (!item.sizes || item.sizes.length === 0) return [];
 
-  var skipSizeFilter = (item.category === 'accessories' || item.category === 'other');
+  var hasOnlyOneSize = (!item.sizes || item.sizes.length === 0);
+  if (!hasOnlyOneSize && item.sizes) {
+    hasOnlyOneSize = item.sizes.length === 1 && (item.sizes[0].name === 'One Size' || item.sizes[0].code === '999');
+  }
+  var skipSizeFilter = (item.category === 'accessories' && hasOnlyOneSize) || hasOnlyOneSize;
   var result = [];
 
   for (var s = 0; s < item.sizes.length; s++) {
@@ -287,6 +296,60 @@ function buildSizeFilters(prefs) {
     }
   }
   return sizes;
+}
+
+/* Debug: run this manually to see exactly what the filter logic does */
+function debugSaleFilter() {
+  var subscribers = getSaleSubscribers();
+  if (subscribers.length === 0) { Logger.log('No subscribers'); return; }
+  
+  var sub = subscribers[0];
+  var prefs = sub.salePrefs;
+  Logger.log('=== SALE FILTER DEBUG ===');
+  Logger.log('Prefs: ' + JSON.stringify(prefs));
+  
+  var filterSizes = buildSizeFilters(prefs);
+  Logger.log('Filter sizes: ' + JSON.stringify(filterSizes));
+  
+  var region = prefs.region || sub.region || 'es';
+  var gender = prefs.gender || 'men';
+  Logger.log('Region: ' + region + ' Gender: ' + gender);
+  
+  var items = fetchSalePageProducts(region, gender);
+  Logger.log('Total sale items: ' + items.length);
+  
+  if (items.length === 0) return;
+  
+  // Enrich first 3 with stock
+  var testItems = items.slice(0, 3);
+  enrichWithStock(testItems, region);
+  
+  var filter = {
+    gender: gender,
+    categories: prefs.categories || [],
+    sizes: filterSizes,
+    minDiscount: 0
+  };
+  
+  for (var i = 0; i < testItems.length; i++) {
+    var item = testItems[i];
+    Logger.log('');
+    Logger.log('--- Item: ' + item.name + ' (cat: ' + item.category + ') ---');
+    Logger.log('Sizes from API:');
+    for (var s = 0; s < item.sizes.length; s++) {
+      var sz = item.sizes[s];
+      Logger.log('  code=' + sz.code + ' name=' + sz.name + ' inStock=' + sz.inStock);
+    }
+    
+    var matches = saleItemMatchesFilter(item, filter);
+    Logger.log('Matches filter: ' + matches);
+    
+    var relevant = getRelevantSizes(item, filter);
+    var relNames = relevant.map(function(r) { return r.name; });
+    Logger.log('Relevant sizes: ' + JSON.stringify(relNames));
+  }
+  
+  Logger.log('=== DONE ===');
 }
 /* ============================
    STOCK CHECK — for new sale items
