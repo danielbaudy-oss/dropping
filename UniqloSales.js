@@ -351,6 +351,33 @@ function debugSaleFilter() {
   
   Logger.log('=== DONE ===');
 }
+
+/* Test: sends a real sale notification to your Telegram using the first matching item */
+function testSaleNotification() {
+  var subscribers = getSaleSubscribers();
+  if (subscribers.length === 0) { Logger.log('No subscribers'); return; }
+  
+  var sub = subscribers[0];
+  var prefs = sub.salePrefs;
+  var region = prefs.region || sub.region || 'es';
+  var gender = prefs.gender || 'men';
+  var filterSizes = buildSizeFilters(prefs);
+  var filter = { gender: gender, categories: prefs.categories || [], sizes: filterSizes, minDiscount: 0 };
+  
+  var items = fetchSalePageProducts(region, gender);
+  if (items.length === 0) { Logger.log('No sale items found'); return; }
+  
+  enrichWithStock(items.slice(0, 10), region);
+  for (var i = 0; i < Math.min(items.length, 10); i++) {
+    if (saleItemMatchesFilter(items[i], filter)) {
+      Logger.log('Sending test alert for: ' + items[i].name);
+      sendSaleAlert(sub.chat_id, items[i], filter);
+      Logger.log('Done — check Telegram');
+      return;
+    }
+  }
+  Logger.log('No matching items in first 10');
+}
 /* ============================
    STOCK CHECK — for new sale items
    ============================ */
@@ -383,14 +410,26 @@ function enrichWithStock(items, region) {
           var stocks = data.result.stocks || {};
           var l2s = data.result.l2s || [];
           var sizeStock = {};
+          // colorStock: { colorCode: { sizeCode: true/false } }
+          var colorStock = {};
+          // colorNames from l2s data
+          var colorNames = {};
           for (var j = 0; j < l2s.length; j++) {
             var l2 = l2s[j];
             var sc = l2.size ? l2.size.displayCode : '';
+            var cc = l2.color ? l2.color.displayCode : '';
             var st = stocks[l2.l2Id];
-            if (sc && st) {
-              if (!sizeStock[sc] || st.statusCode !== 'STOCK_OUT') {
-                sizeStock[sc] = st.statusCode !== 'STOCK_OUT';
-              }
+            var inStock = st ? st.statusCode !== 'STOCK_OUT' : false;
+            
+            if (sc) {
+              if (!sizeStock[sc] || inStock) sizeStock[sc] = inStock;
+            }
+            if (cc && sc) {
+              if (!colorStock[cc]) colorStock[cc] = {};
+              colorStock[cc][sc] = inStock;
+            }
+            if (cc && l2.color && l2.color.name) {
+              colorNames[cc] = l2.color.name;
             }
           }
           for (var s = 0; s < item.sizes.length; s++) {
@@ -399,6 +438,8 @@ function enrichWithStock(items, region) {
               item.sizes[s].inStock = sizeStock[code];
             }
           }
+          item.colorStock = colorStock;
+          item.colorNames = colorNames;
         }
       }
     } catch (e) {
@@ -543,12 +584,61 @@ function sendSaleAlert(chatId, item, filter) {
     'Was: ' + s + item.basePrice.toFixed(2) + '\n' +
     '*Now: ' + s + item.salePrice.toFixed(2) + '* (-' + item.discount + '%)\n';
 
-  // Only show the user's relevant in-stock sizes
-  var relevant = filter ? getRelevantSizes(item, filter) : [];
-  if (relevant.length > 0) {
-    var names = [];
-    for (var i = 0; i < relevant.length; i++) names.push(relevant[i].name);
-    text += '✅ ' + names.join(', ') + '\n';
+  // Build size → colors matrix if we have per-color stock data
+  var hasColorBreakdown = item.colorStock && Object.keys(item.colorStock).length > 0 && filter;
+  if (hasColorBreakdown) {
+    var filterSizes = filter.sizes || [];
+    // Collect color names from item.colors and item.colorNames
+    var cNames = item.colorNames || {};
+    if (item.colors) {
+      for (var c = 0; c < item.colors.length; c++) {
+        if (item.colors[c].code && item.colors[c].name && !cNames[item.colors[c].code]) {
+          cNames[item.colors[c].code] = item.colors[c].name;
+        }
+      }
+    }
+
+    // For each user size, find which colors have it in stock
+    var sizeColorMap = {}; // { "M": ["Black", "Navy"], "L": ["Black"] }
+    var colorCodes = Object.keys(item.colorStock);
+    for (var ci = 0; ci < colorCodes.length; ci++) {
+      var cc = colorCodes[ci];
+      var colorName = cNames[cc] || cc;
+      var sizesForColor = item.colorStock[cc];
+      var sizeCodes = Object.keys(sizesForColor);
+      for (var si = 0; si < sizeCodes.length; si++) {
+        var sc = sizeCodes[si];
+        if (!sizesForColor[sc]) continue; // out of stock
+        var sizeName = SALE_SIZE_MAP[sc] || SIZE_NAMES[sc] || sc;
+        // Check if this size matches user's filter
+        var matchesFilter = (filterSizes.length === 0);
+        if (!matchesFilter) {
+          for (var f = 0; f < filterSizes.length; f++) {
+            if (sc === filterSizes[f] || sizeName === filterSizes[f]) { matchesFilter = true; break; }
+          }
+        }
+        if (matchesFilter) {
+          if (!sizeColorMap[sizeName]) sizeColorMap[sizeName] = [];
+          if (sizeColorMap[sizeName].indexOf(colorName) === -1) sizeColorMap[sizeName].push(colorName);
+        }
+      }
+    }
+
+    var sizeKeys = Object.keys(sizeColorMap);
+    if (sizeKeys.length > 0) {
+      text += '\n';
+      for (var sk = 0; sk < sizeKeys.length; sk++) {
+        text += '*' + sizeKeys[sk] + '* — ' + sizeColorMap[sizeKeys[sk]].join(', ') + '\n';
+      }
+    }
+  } else {
+    // Fallback: just show relevant sizes without color breakdown
+    var relevant = filter ? getRelevantSizes(item, filter) : [];
+    if (relevant.length > 0) {
+      var names = [];
+      for (var i = 0; i < relevant.length; i++) names.push(relevant[i].name);
+      text += '✅ ' + names.join(', ') + '\n';
+    }
   }
 
   text += '\n[View on Uniqlo](' + item.url + ')';
