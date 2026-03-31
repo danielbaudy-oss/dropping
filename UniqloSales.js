@@ -530,7 +530,7 @@ function checkUniqloSales() {
 
         if (newItems.length === 0) continue;
 
-    // Enrich new items with stock (typically 1-3 items, very fast)
+    // Enrich new items with stock
     Logger.log('Checking stock for ' + newItems.length + ' new items...');
     enrichWithStock(newItems, group.region);
 
@@ -553,19 +553,22 @@ function checkUniqloSales() {
 
       if (matching.length === 0) continue;
 
-      Logger.log('Sending ' + matching.length + ' alerts to ' + sub.chat_id);
+      Logger.log('Sending digest + ' + matching.length + ' alerts to ' + sub.chat_id);
 
-      if (matching.length <= 5) {
-        for (var m = 0; m < matching.length; m++) {
-          sendSaleAlert(sub.chat_id, matching[m], filter);
-          Utilities.sleep(300);
-        }
-      } else {
-        sendSaleSummary(sub.chat_id, matching, group.gender, group.region);
-        for (var m = 0; m < Math.min(matching.length, 8); m++) {
-          sendSaleAlert(sub.chat_id, matching[m], filter);
-          Utilities.sleep(300);
-        }
+      // Send daily digest header
+      var today = new Date();
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var dateStr = today.getDate() + ' ' + months[today.getMonth()];
+      var gLabel = group.gender === 'women' ? "Women's" : "Men's";
+      var digestText = '🏷 *Uniqlo ' + gLabel + ' Sale Update — ' + dateStr + '*\n\n' +
+        matching.length + ' new item' + (matching.length > 1 ? 's' : '') + ' in your size';
+      sendMessage(sub.chat_id, digestText);
+      Utilities.sleep(300);
+
+      // Send individual item cards
+      for (var m = 0; m < matching.length; m++) {
+        sendSaleAlert(sub.chat_id, matching[m], filter);
+        Utilities.sleep(300);
       }
     }
   }

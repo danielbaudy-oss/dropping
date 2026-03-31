@@ -56,12 +56,8 @@ function setupSchedule() {
 
     ScriptApp.newTrigger('checkUniqloSales')
     .timeBased().everyDays(1).atHour(8).create();
-  ScriptApp.newTrigger('checkUniqloSales')
-    .timeBased().everyDays(1).atHour(14).create();
-  ScriptApp.newTrigger('checkUniqloSales')
-    .timeBased().everyDays(1).atHour(21).create();
 
-  Logger.log('   Uniqlo Sales: 8:00, 14:00, 21:00 (3x daily)');
+  Logger.log('   Uniqlo Sales: 8:00 (1x daily)');
 }
 
 /* ============================
