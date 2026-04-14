@@ -368,15 +368,27 @@ function testSaleNotification() {
   if (items.length === 0) { Logger.log('No sale items found'); return; }
   
   enrichWithStock(items.slice(0, 10), region);
+  var matching = [];
   for (var i = 0; i < Math.min(items.length, 10); i++) {
-    if (saleItemMatchesFilter(items[i], filter)) {
-      Logger.log('Sending test alert for: ' + items[i].name);
-      sendSaleAlert(sub.chat_id, items[i], filter);
-      Logger.log('Done — check Telegram');
-      return;
-    }
+    if (saleItemMatchesFilter(items[i], filter)) matching.push(items[i]);
   }
-  Logger.log('No matching items in first 10');
+  if (matching.length === 0) { Logger.log('No matching items in first 10'); return; }
+
+  // Digest header
+  var today = new Date();
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var dateStr = today.getDate() + ' ' + months[today.getMonth()];
+  var gLabel = gender === 'women' ? "Women's" : "Men's";
+  sendMessage(sub.chat_id, '🏷 *Uniqlo ' + gLabel + ' Sale Update — ' + dateStr + '*\n\n' +
+    matching.length + ' new item' + (matching.length > 1 ? 's' : '') + ' in your size');
+  Utilities.sleep(300);
+
+  for (var m = 0; m < matching.length; m++) {
+    Logger.log('Sending test alert for: ' + matching[m].name);
+    sendSaleAlert(sub.chat_id, matching[m], filter);
+    Utilities.sleep(300);
+  }
+  Logger.log('Done — check Telegram');
 }
 /* ============================
    STOCK CHECK — for new sale items
@@ -391,7 +403,7 @@ function enrichWithStock(items, region) {
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
     var apiUrl = 'https://www.uniqlo.com/' + region + '/api/commerce/v5/' + lang +
-      '/products/' + item.productCode + '/price-groups/00/l2s?withStocks=true&httpFailure=true';
+      '/products/' + item.productCode + '/price-groups/00/l2s?withPrices=true&withStocks=true&httpFailure=true';
     
     try {
       var r = UrlFetchApp.fetch(apiUrl, {
@@ -408,17 +420,18 @@ function enrichWithStock(items, region) {
         var data = JSON.parse(r.getContentText());
         if (data.status === 'ok' && data.result) {
           var stocks = data.result.stocks || {};
+          var prices = data.result.prices || {};
           var l2s = data.result.l2s || [];
           var sizeStock = {};
-          // colorStock: { colorCode: { sizeCode: true/false } }
           var colorStock = {};
-          // colorNames from l2s data
           var colorNames = {};
+          var colorOnSale = {}; // track which colors actually have promo pricing
           for (var j = 0; j < l2s.length; j++) {
             var l2 = l2s[j];
             var sc = l2.size ? l2.size.displayCode : '';
             var cc = l2.color ? l2.color.displayCode : '';
             var st = stocks[l2.l2Id];
+            var pr = prices[l2.l2Id];
             var inStock = st ? st.statusCode !== 'STOCK_OUT' : false;
             
             if (sc) {
@@ -429,7 +442,15 @@ function enrichWithStock(items, region) {
               colorStock[cc][sc] = inStock;
             }
             if (cc && l2.color && l2.color.name) {
-              colorNames[cc] = l2.color.name;
+              colorNames[cc] = cleanColorName(l2.color.name);
+            }
+            // Check if this color has a promo price (actually on sale)
+            if (cc && pr) {
+              var base = (pr.base && pr.base.value) || 0;
+              var promo = (pr.promo && pr.promo.value) || 0;
+              if (promo > 0 && promo < base) {
+                colorOnSale[cc] = true;
+              }
             }
           }
           for (var s = 0; s < item.sizes.length; s++) {
@@ -438,8 +459,18 @@ function enrichWithStock(items, region) {
               item.sizes[s].inStock = sizeStock[code];
             }
           }
+          // Also pull names from listing API colors
+          if (item.colors) {
+            for (var c = 0; c < item.colors.length; c++) {
+              var ic = item.colors[c];
+              if (ic.code && ic.name && !colorNames[ic.code]) {
+                colorNames[ic.code] = cleanColorName(ic.name);
+              }
+            }
+          }
           item.colorStock = colorStock;
           item.colorNames = colorNames;
+          item.colorOnSale = colorOnSale;
         }
       }
     } catch (e) {
@@ -448,6 +479,14 @@ function enrichWithStock(items, region) {
     Utilities.sleep(200);
   }
   return items;
+}
+
+/* Strip leading number code from color names like "62 BLUE" → "Blue" */
+function cleanColorName(name) {
+  if (!name) return '';
+  var cleaned = name.replace(/^\d+\s+/, '');
+  // Title case
+  return cleaned.charAt(0).toUpperCase() + cleaned.substring(1).toLowerCase();
 }
 
 /* ============================
@@ -587,33 +626,30 @@ function sendSaleAlert(chatId, item, filter) {
     'Was: ' + s + item.basePrice.toFixed(2) + '\n' +
     '*Now: ' + s + item.salePrice.toFixed(2) + '* (-' + item.discount + '%)\n';
 
-  // Build size → colors matrix if we have per-color stock data
   var hasColorBreakdown = item.colorStock && Object.keys(item.colorStock).length > 0 && filter;
+  var firstOnSaleColor = ''; // for the URL
+
   if (hasColorBreakdown) {
     var filterSizes = filter.sizes || [];
-    // Collect color names from item.colors and item.colorNames
     var cNames = item.colorNames || {};
-    if (item.colors) {
-      for (var c = 0; c < item.colors.length; c++) {
-        if (item.colors[c].code && item.colors[c].name && !cNames[item.colors[c].code]) {
-          cNames[item.colors[c].code] = item.colors[c].name;
-        }
-      }
-    }
+    var onSale = item.colorOnSale || {};
 
-    // For each user size, find which colors have it in stock
-    var sizeColorMap = {}; // { "M": ["Black", "Navy"], "L": ["Black"] }
+    // Build size → colors matrix, only for colors actually on sale
+    var sizeColorMap = {};
     var colorCodes = Object.keys(item.colorStock);
     for (var ci = 0; ci < colorCodes.length; ci++) {
       var cc = colorCodes[ci];
+      // Skip colors not on sale (if we have per-color sale data)
+      if (Object.keys(onSale).length > 0 && !onSale[cc]) continue;
+      if (!firstOnSaleColor) firstOnSaleColor = cc;
+
       var colorName = cNames[cc] || cc;
       var sizesForColor = item.colorStock[cc];
       var sizeCodes = Object.keys(sizesForColor);
       for (var si = 0; si < sizeCodes.length; si++) {
         var sc = sizeCodes[si];
-        if (!sizesForColor[sc]) continue; // out of stock
+        if (!sizesForColor[sc]) continue;
         var sizeName = SALE_SIZE_MAP[sc] || SIZE_NAMES[sc] || sc;
-        // Check if this size matches user's filter
         var matchesFilter = (filterSizes.length === 0);
         if (!matchesFilter) {
           for (var f = 0; f < filterSizes.length; f++) {
@@ -635,7 +671,6 @@ function sendSaleAlert(chatId, item, filter) {
       }
     }
   } else {
-    // Fallback: just show relevant sizes without color breakdown
     var relevant = filter ? getRelevantSizes(item, filter) : [];
     if (relevant.length > 0) {
       var names = [];
@@ -644,7 +679,13 @@ function sendSaleAlert(chatId, item, filter) {
     }
   }
 
-  text += '\n[View on Uniqlo](' + item.url + ')';
+  // Build URL with color parameter if available
+  var url = item.url || '';
+  if (firstOnSaleColor && url.indexOf('colorDisplayCode') === -1) {
+    url += (url.indexOf('?') === -1 ? '?' : '&') + 'colorDisplayCode=' + firstOnSaleColor;
+  }
+
+  text += '\n[View on Uniqlo](' + url + ')';
 
   try {
     if (item.image) {
