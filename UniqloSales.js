@@ -298,7 +298,100 @@ function buildSizeFilters(prefs) {
   return sizes;
 }
 
-/* Debug: run this manually to see exactly what the filter logic does */
+/* Debug: inspect a specific product's color/price/stock data */
+function debugProduct() {
+  var productCode = 'E474536-000';
+  var region = 'es';
+  var lang = UNIQLO_LANGS[region] || 'en';
+  var clientId = UNIQLO_CLIENTS[region] || 'uq.' + region + '.web-spa';
+
+  Logger.log('=== DEBUG PRODUCT ' + productCode + ' ===');
+
+  // 1. Fetch from listing API (what normaliseSaleApiItems sees)
+  var listUrl = 'https://www.uniqlo.com/' + region + '/api/commerce/v5/' + lang +
+    '/products?offset=0&limit=10&httpFailure=true&productIds=' + productCode;
+  try {
+    var lr = UrlFetchApp.fetch(listUrl, {
+      muteHttpExceptions: true,
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json',
+        'Referer': 'https://www.uniqlo.com/' + region + '/', 'x-fr-clientid': clientId }
+    });
+    if (lr.getResponseCode() === 200) {
+      var ld = JSON.parse(lr.getContentText());
+      if (ld.result && ld.result.items && ld.result.items[0]) {
+        var item = ld.result.items[0];
+        Logger.log('Listing API name: ' + item.name);
+        Logger.log('Listing API colors:');
+        if (item.colors) {
+          for (var c = 0; c < item.colors.length; c++) {
+            Logger.log('  code=' + item.colors[c].displayCode + ' name=' + (item.colors[c].name || 'NO NAME'));
+          }
+        }
+        Logger.log('Listing API prices: base=' + (item.prices && item.prices.base ? item.prices.base.value : '?') +
+          ' promo=' + (item.prices && item.prices.promo ? item.prices.promo.value : 'none'));
+      }
+    }
+  } catch (e) { Logger.log('Listing API error: ' + e); }
+
+  // 2. Fetch l2s API for BOTH price groups (00 and 01)
+  var priceGroups = ['00', '01'];
+  for (var pg = 0; pg < priceGroups.length; pg++) {
+    var apiUrl = 'https://www.uniqlo.com/' + region + '/api/commerce/v5/' + lang +
+      '/products/' + productCode + '/price-groups/' + priceGroups[pg] + '/l2s?withPrices=true&withStocks=true&httpFailure=true';
+    Logger.log('\n--- Price Group ' + priceGroups[pg] + ' ---');
+    try {
+      var r = UrlFetchApp.fetch(apiUrl, {
+        muteHttpExceptions: true,
+        headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json',
+          'Referer': 'https://www.uniqlo.com/' + region + '/', 'x-fr-clientid': clientId }
+      });
+      if (r.getResponseCode() === 200) {
+        var data = JSON.parse(r.getContentText());
+        if (data.status === 'ok' && data.result) {
+          var l2s = data.result.l2s || [];
+          var prices = data.result.prices || {};
+          var stocks = data.result.stocks || {};
+
+          Logger.log('l2s entries: ' + l2s.length);
+          var colorInfo = {};
+          for (var j = 0; j < l2s.length; j++) {
+            var l2 = l2s[j];
+            var cc = l2.color ? l2.color.displayCode : '?';
+            var sc = l2.size ? l2.size.displayCode : '?';
+            var cn = l2.color ? l2.color.name : '';
+            var pr = prices[l2.l2Id];
+            var st = stocks[l2.l2Id];
+            var base = (pr && pr.base) ? pr.base.value : 0;
+            var promo = (pr && pr.promo) ? pr.promo.value : 0;
+            var inStock = st ? st.statusCode !== 'STOCK_OUT' : false;
+            var onSale = promo > 0 && promo < base;
+
+            if (!colorInfo[cc]) colorInfo[cc] = { name: cn, sizes: [], onSale: false };
+            if (cn && !colorInfo[cc].name) colorInfo[cc].name = cn;
+            colorInfo[cc].sizes.push({ size: sc, base: base, promo: promo, onSale: onSale, inStock: inStock });
+            if (onSale) colorInfo[cc].onSale = true;
+          }
+
+          var colorKeys = Object.keys(colorInfo);
+          for (var k = 0; k < colorKeys.length; k++) {
+            var ci = colorInfo[colorKeys[k]];
+            Logger.log('Color ' + colorKeys[k] + ' (' + (ci.name || 'NO NAME') + ') — onSale: ' + ci.onSale);
+            for (var s = 0; s < ci.sizes.length; s++) {
+              var sz = ci.sizes[s];
+              Logger.log('  size=' + sz.size + ' base=' + sz.base + ' promo=' + sz.promo + ' onSale=' + sz.onSale + ' inStock=' + sz.inStock);
+            }
+          }
+        } else {
+          Logger.log('API status not ok or no result');
+        }
+      } else {
+        Logger.log('HTTP ' + r.getResponseCode());
+      }
+    } catch (e) { Logger.log('l2s API error: ' + e); }
+  }
+
+  Logger.log('\n=== DONE ===');
+}
 function debugSaleFilter() {
   var subscribers = getSaleSubscribers();
   if (subscribers.length === 0) { Logger.log('No subscribers'); return; }
@@ -402,81 +495,88 @@ function enrichWithStock(items, region) {
   
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
-    var apiUrl = 'https://www.uniqlo.com/' + region + '/api/commerce/v5/' + lang +
-      '/products/' + item.productCode + '/price-groups/00/l2s?withPrices=true&withStocks=true&httpFailure=true';
-    
-    try {
-      var r = UrlFetchApp.fetch(apiUrl, {
-        muteHttpExceptions: true,
-        headers: {
-          'User-Agent': 'Mozilla/5.0',
-          'Accept': 'application/json',
-          'Referer': 'https://www.uniqlo.com/' + region + '/',
-          'x-fr-clientid': clientId
-        }
-      });
-      
-      if (r.getResponseCode() === 200) {
-        var data = JSON.parse(r.getContentText());
-        if (data.status === 'ok' && data.result) {
-          var stocks = data.result.stocks || {};
-          var prices = data.result.prices || {};
-          var l2s = data.result.l2s || [];
-          var sizeStock = {};
-          var colorStock = {};
-          var colorNames = {};
-          var colorOnSale = {}; // track which colors actually have promo pricing
-          for (var j = 0; j < l2s.length; j++) {
-            var l2 = l2s[j];
-            var sc = l2.size ? l2.size.displayCode : '';
-            var cc = l2.color ? l2.color.displayCode : '';
-            var st = stocks[l2.l2Id];
-            var pr = prices[l2.l2Id];
-            var inStock = st ? st.statusCode !== 'STOCK_OUT' : false;
-            
-            if (sc) {
-              if (!sizeStock[sc] || inStock) sizeStock[sc] = inStock;
-            }
-            if (cc && sc) {
-              if (!colorStock[cc]) colorStock[cc] = {};
-              colorStock[cc][sc] = inStock;
-            }
-            if (cc && l2.color && l2.color.name) {
-              colorNames[cc] = cleanColorName(l2.color.name);
-            }
-            // Check if this color has a promo price (actually on sale)
-            if (cc && pr) {
-              var base = (pr.base && pr.base.value) || 0;
-              var promo = (pr.promo && pr.promo.value) || 0;
-              if (promo > 0 && promo < base) {
-                colorOnSale[cc] = true;
-              }
-            }
-          }
-          for (var s = 0; s < item.sizes.length; s++) {
-            var code = item.sizes[s].code;
-            if (sizeStock[code] !== undefined) {
-              item.sizes[s].inStock = sizeStock[code];
-            }
-          }
-          // Also pull names from listing API colors
-          if (item.colors) {
-            for (var c = 0; c < item.colors.length; c++) {
-              var ic = item.colors[c];
-              if (ic.code && ic.name && !colorNames[ic.code]) {
-                colorNames[ic.code] = cleanColorName(ic.name);
-              }
-            }
-          }
-          item.colorStock = colorStock;
-          item.colorNames = colorNames;
-          item.colorOnSale = colorOnSale;
+    var sizeStock = {};
+    var colorStock = {};
+    var colorNames = {};
+    var colorOnSale = {};
+
+    // Pull color names from listing API data first
+    if (item.colors) {
+      for (var c = 0; c < item.colors.length; c++) {
+        if (item.colors[c].code && item.colors[c].name) {
+          colorNames[item.colors[c].code] = cleanColorName(item.colors[c].name);
         }
       }
-    } catch (e) {
-      Logger.log('Stock check failed for ' + item.productCode + ': ' + e);
     }
-    Utilities.sleep(200);
+
+    // Check both price groups — sale colors often live in group 01
+    var priceGroups = ['00', '01'];
+    for (var pg = 0; pg < priceGroups.length; pg++) {
+      var apiUrl = 'https://www.uniqlo.com/' + region + '/api/commerce/v5/' + lang +
+        '/products/' + item.productCode + '/price-groups/' + priceGroups[pg] + '/l2s?withPrices=true&withStocks=true&httpFailure=true';
+      
+      try {
+        var r = UrlFetchApp.fetch(apiUrl, {
+          muteHttpExceptions: true,
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/json',
+            'Referer': 'https://www.uniqlo.com/' + region + '/',
+            'x-fr-clientid': clientId
+          }
+        });
+        
+        if (r.getResponseCode() === 200) {
+          var data = JSON.parse(r.getContentText());
+          if (data.status === 'ok' && data.result) {
+            var stocks = data.result.stocks || {};
+            var prices = data.result.prices || {};
+            var l2s = data.result.l2s || [];
+
+            for (var j = 0; j < l2s.length; j++) {
+              var l2 = l2s[j];
+              var sc = l2.size ? l2.size.displayCode : '';
+              var cc = l2.color ? l2.color.displayCode : '';
+              var st = stocks[l2.l2Id];
+              var pr = prices[l2.l2Id];
+              var inStock = st ? st.statusCode !== 'STOCK_OUT' : false;
+              
+              if (sc) {
+                if (!sizeStock[sc] || inStock) sizeStock[sc] = inStock;
+              }
+              if (cc && sc) {
+                if (!colorStock[cc]) colorStock[cc] = {};
+                colorStock[cc][sc] = inStock;
+              }
+              if (cc && l2.color && l2.color.name && !colorNames[cc]) {
+                colorNames[cc] = cleanColorName(l2.color.name);
+              }
+              if (cc && pr) {
+                var base = (pr.base && pr.base.value) || 0;
+                var promo = (pr.promo && pr.promo.value) || 0;
+                if (promo > 0 && promo < base) {
+                  colorOnSale[cc] = true;
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        Logger.log('Stock check failed for ' + item.productCode + ' pg' + priceGroups[pg] + ': ' + e);
+      }
+      Utilities.sleep(150);
+    }
+
+    // Update item size stock
+    for (var s = 0; s < item.sizes.length; s++) {
+      var code = item.sizes[s].code;
+      if (sizeStock[code] !== undefined) {
+        item.sizes[s].inStock = sizeStock[code];
+      }
+    }
+    item.colorStock = colorStock;
+    item.colorNames = colorNames;
+    item.colorOnSale = colorOnSale;
   }
   return items;
 }
@@ -681,8 +781,12 @@ function sendSaleAlert(chatId, item, filter) {
 
   // Build URL with color parameter if available
   var url = item.url || '';
-  if (firstOnSaleColor && url.indexOf('colorDisplayCode') === -1) {
-    url += (url.indexOf('?') === -1 ? '?' : '&') + 'colorDisplayCode=' + firstOnSaleColor;
+  if (firstOnSaleColor) {
+    // Fix price group in URL — sale colors may be in /01 not /00
+    url = url.replace('/00', '/01');
+    if (url.indexOf('colorDisplayCode') === -1) {
+      url += (url.indexOf('?') === -1 ? '?' : '&') + 'colorDisplayCode=' + firstOnSaleColor;
+    }
   }
 
   text += '\n[View on Uniqlo](' + url + ')';
