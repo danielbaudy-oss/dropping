@@ -187,11 +187,16 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
       <div class="steps">
         <b>1.</b> Open <a href="https://t.me/dropping_alerts_bot" target="_blank">@dropping_alerts_bot</a> and send any message<br>
         <b>2.</b> Then open <a href="https://t.me/userinfobot" target="_blank">@userinfobot</a> and send any message — it replies with your Chat ID<br>
-        <b>3.</b> Paste the ID number below and click Test
+        <b>3.</b> Paste the ID below and click "Send code" — we'll send a 6-digit code to your Telegram to verify
       </div>
       <label>Chat ID</label>
       <input type="text" id="cid" placeholder="Your Chat ID number">
-      <button class="btn bblk" id="tbtn" onclick="testTg()">Test connection</button>
+      <button class="btn bblk" id="tbtn" onclick="testTg()">Send code</button>
+      <div id="codeSection" class="hd" style="margin-top:10px">
+        <label>Verification code</label>
+        <input type="text" id="authCode" placeholder="6-digit code from Telegram" maxlength="6">
+        <button class="btn bblk" id="vbtn" onclick="verifyCode()">Verify code</button>
+      </div>
       <div id="tst" class="hd"></div>
     </div>
 
@@ -274,10 +279,208 @@ input:focus,select:focus{outline:none;border-color:#FF0000;box-shadow:0 0 0 2px 
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-var API='https://script.google.com/macros/s/AKfycbwb3hFWnCxkoR-VJcSFQIkPOGfQ-Fwnyrhmeo3HjSjjj91IGCwFU7Fufc58rGP0Gi9KXg/exec';
+/* ====== Supabase config ====== */
+var SUPABASE_URL='https://kxbmlsbxnzvgzucxleoy.supabase.co';
+var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4Ym1sc2J4bnp2Z3p1Y3hsZW95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NzE3ODgsImV4cCI6MjA5MTI0Nzc4OH0.OrKHnYy0vElWI9bQ-xYlE2RXy1TU2FknBPafp--3jMY';
+
 var CID=localStorage.getItem('uq_cid')||'';
-var SEC=localStorage.getItem('uq_sec')||'';
+var SEC=localStorage.getItem('uq_sec')||''; /* session token */
+
+function makeSb(){
+  var headers={};
+  if(SEC)headers['x-session-token']=SEC;
+  return supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+    db:{schema:'dropping'},
+    auth:{persistSession:false},
+    global:{headers:headers}
+  });
+}
+var sb=makeSb();
+function refreshSb(){sb=makeSb();}
+
+/* ====== API shim — translates old action calls to Supabase queries ======
+   Kept so the existing UI code doesn't need to change. */
+function api(params){
+  var action=params.action;
+  return apiDispatch(action,params).catch(function(e){
+    console.error('api error',action,e);
+    return{error:(e&&e.message)||'Request failed'};
+  });
+}
+
+function apiDispatch(action,p){
+  switch(action){
+    case 'products':return apiProducts();
+    case 'add':return apiAdd(p);
+    case 'update':return apiUpdate(p);
+    case 'remove':return apiRemove(p);
+    case 'settings':return apiSettings();
+    case 'save':return apiSaveSettings(p);
+    case 'getSaleSettings':return apiGetSaleSettings();
+    case 'saveSaleSettings':return apiSaveSaleSettings(p);
+    case 'preview':return apiPreview(p);
+    case 'test':return apiRequestCode(p);
+    case 'verify':return apiVerifyCode(p);
+    case 'pushprices':return apiPushPrices(p);
+  }
+  return Promise.resolve({error:'Unknown action: '+action});
+}
+
+function sessionExpired(){
+  localStorage.removeItem('uq_sec');SEC='';refreshSb();
+  document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">⚠️ Session expired. Tap here to reconnect Telegram.</div>';
+}
+
+function apiProducts(){
+  if(!CID||!SEC)return Promise.resolve([]);
+  return sb.from('products').select('*').eq('status','watching').then(function(r){
+    if(r.error){if(r.error.code==='PGRST301'||r.error.code==='42501'){sessionExpired();return{error:'AUTH_FAILED'};}throw r.error;}
+    return r.data||[];
+  });
+}
+
+function apiAdd(p){
+  if(!CID||!SEC)return Promise.resolve({error:'Connect Telegram first'});
+  /* Build row from preview params */
+  var row={
+    chat_id:CID,
+    product_code:p.pc,
+    color_code:p.cc||'',
+    color_name:p.cn||'',
+    size_code:p.sc||'',
+    name:p.pname||'Unknown',
+    image_url:p.pimg||'',
+    product_url:p.purl||'',
+    initial_price:parseFloat(p.pprice)||0,
+    last_price:parseFloat(p.pprice)||0,
+    lowest_price:parseFloat(p.pprice)||0,
+    target_price:p.tp?parseFloat(p.tp):null,
+    currency:p.pcur||'EUR',
+    region:p.rg||'es',
+    status:'watching',
+    store:p.store||'uniqlo'
+  };
+  return sb.from('products').insert(row).select().single().then(function(r){
+    if(r.error){if(r.error.code==='23505')return{error:'Already watching this'};throw r.error;}
+    return{ok:true,id:r.data.id,name:r.data.name,price:r.data.initial_price};
+  });
+}
+
+function apiUpdate(p){
+  if(!CID||!SEC)return Promise.resolve({error:'Not connected'});
+  var patch={};
+  if(p.cc!==undefined)patch.color_code=p.cc;
+  if(p.cn!==undefined)patch.color_name=p.cn;
+  if(p.sc!==undefined)patch.size_code=p.sc;
+  if(p.tp!==undefined)patch.target_price=p.tp?parseFloat(p.tp):null;
+  if(p.purl)patch.product_url=p.purl;
+  if(p.pimg)patch.image_url=p.pimg;
+  return sb.from('products').update(patch).eq('id',p.pid).then(function(r){
+    if(r.error)throw r.error;
+    return{ok:true};
+  });
+}
+
+function apiRemove(p){
+  if(!CID||!SEC)return Promise.resolve({error:'Not connected'});
+  return sb.from('products').delete().eq('id',p.pid).then(function(r){
+    if(r.error)throw r.error;
+    return{ok:true};
+  });
+}
+
+function apiSettings(){
+  if(!CID||!SEC)return Promise.resolve({});
+  return sb.from('users').select('*').eq('chat_id',CID).maybeSingle().then(function(r){
+    if(r.error)throw r.error;
+    return r.data||{};
+  });
+}
+
+function apiSaveSettings(p){
+  if(!CID||!SEC)return Promise.resolve({error:'Not connected'});
+  var patch={};
+  if(p.st)patch.size_tops=p.st;
+  if(p.sb)patch.size_bottoms=p.sb;
+  if(p.rg)patch.region=p.rg;
+  return sb.from('users').update(patch).eq('chat_id',CID).then(function(r){
+    if(r.error)throw r.error;
+    return{ok:true};
+  });
+}
+
+function apiGetSaleSettings(){
+  if(!CID||!SEC)return Promise.resolve({enabled:false,prefs:{}});
+  return sb.from('users').select('sale_alerts,sale_prefs').eq('chat_id',CID).maybeSingle().then(function(r){
+    if(r.error)throw r.error;
+    if(!r.data)return{enabled:false,prefs:{}};
+    return{enabled:r.data.sale_alerts===true,prefs:r.data.sale_prefs||{}};
+  });
+}
+
+function apiSaveSaleSettings(p){
+  if(!CID||!SEC)return Promise.resolve({error:'Not connected'});
+  var patch={sale_alerts:p.enabled==='true'||p.enabled===true};
+  if(p.sp){try{patch.sale_prefs=JSON.parse(p.sp);}catch(e){patch.sale_prefs={};}}
+  return sb.from('users').update(patch).eq('chat_id',CID).then(function(r){
+    if(r.error)throw r.error;
+    return{ok:true};
+  });
+}
+
+/* ====== Preview: use client-side scrapers already in this file ====== */
+function apiPreview(p){
+  /* Preview is fully client-side now — just echo back what the client provided */
+  if(p.cp){
+    try{
+      var prod=JSON.parse(p.cp);
+      var parsed={};
+      var store=detectStoreJS(p.url);
+      if(store==='arket')parsed=parseArketUrlJS(p.url);
+      else if(store==='cos')parsed=parseCosUrlJS(p.url);
+      else if(store==='mango')parsed=parseMangoUrlJS(p.url);
+      else parsed=parseUniqloUrlJS(p.url);
+      if(!parsed)return Promise.resolve({error:'Invalid URL'});
+      prod.productCode=parsed.productCode;
+      prod.region=parsed.region||parsed.languageMarket;
+      prod.store=store;
+      return Promise.resolve({ok:true,product:prod,parsed:parsed,store:store});
+    }catch(e){return Promise.resolve({error:'Invalid product data'});}
+  }
+  /* Uniqlo without client data — do a client-side fetch */
+  if(p.url&&p.url.indexOf('uniqlo.com')!==-1){
+    return fetchUniqloClientSide(p.url).then(function(product){
+      var parsed=parseUniqloUrlJS(p.url);
+      return{ok:true,product:product,parsed:parsed,store:'uniqlo'};
+    }).catch(function(e){return{error:'Could not fetch product'};});
+  }
+  return Promise.resolve({error:'Client-side product data required'});
+}
+
+/* ====== Auth: request code + verify via Edge Functions ====== */
+function apiRequestCode(p){
+  var chatId=p.cid;
+  return fetch(SUPABASE_URL+'/functions/v1/auth-request-code',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY,'apikey':SUPABASE_ANON_KEY},
+    body:JSON.stringify({chatId:chatId})
+  }).then(function(r){return r.json();});
+}
+
+function apiVerifyCode(p){
+  return fetch(SUPABASE_URL+'/functions/v1/auth-verify-code',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY,'apikey':SUPABASE_ANON_KEY},
+    body:JSON.stringify({chatId:p.cid,code:p.code})
+  }).then(function(r){return r.json();});
+}
+
+function apiPushPrices(){
+  /* No-op: price checking happens on the Pi now */
+  return Promise.resolve({ok:true,updated:0,drops:0});
+}
 var cProd=null,cParsed=null,selColor='',selSize='';
 var cachedProducts=null;
 var pendingRemoveId=null;
@@ -301,17 +504,6 @@ function detectStoreFromProduct(p){
   if(p.product_url&&p.product_url.indexOf('cos.com')!==-1)return 'cos';
   if(p.product_url&&p.product_url.indexOf('mango.com')!==-1)return 'mango';
   return 'uniqlo';
-}
-function api(params){
-  if(CID&&SEC&&!params.sec){params.sec=SEC;}
-  var url=API+'?'+Object.keys(params).map(function(k){return k+'='+encodeURIComponent(params[k]);}).join('&');
-  return fetch(url).then(function(r){return r.json();}).then(function(data){
-    if(data&&data.error==='AUTH_FAILED'){
-      localStorage.removeItem('uq_sec');SEC='';
-      document.getElementById('hb').innerHTML='<div class="banner" onclick="goSet()">⚠️ Session expired. Tap here to reconnect Telegram.</div>';
-    }
-    return data;
-  });
 }
 
 function cacheProductData(productCode,region,data){
@@ -1268,19 +1460,40 @@ function testTg(){
   var c=document.getElementById('cid').value.trim();
   if(!c){sst('tst','Enter your Chat ID','se');return;}
   if(!/^\d+$/.test(c)){sst('tst','Chat ID should be a number','se');return;}
-  var b=document.getElementById('tbtn');b.disabled=true;b.textContent='Sending...';
+  var b=document.getElementById('tbtn');b.disabled=true;b.textContent='Sending code...';
   api({action:'test',cid:c}).then(function(r){
-    b.disabled=false;b.textContent='Test connection';
+    b.disabled=false;b.textContent='Send code';
     if(r&&r.ok){
-      localStorage.setItem('uq_cid',c);CID=c;
-      if(r.secret){localStorage.setItem('uq_sec',r.secret);SEC=r.secret;}
-      document.getElementById('scid').textContent=c;
-      document.getElementById('cbanner').classList.remove('hd');
-      sst('tst','Connected! Check Telegram.','so');
-      cachedProducts=null;localStorage.removeItem('uq_products');
+      /* Stash chat id and show code input */
+      window._pendingChatId=c;
+      document.getElementById('codeSection').classList.remove('hd');
+      sst('tst','Check Telegram for your 6-digit code','so');
     }
     else sst('tst',(r?r.error:'Failed'),'se');
-  }).catch(function(e){b.disabled=false;b.textContent='Test connection';sst('tst','Connection failed','se');});
+  }).catch(function(e){b.disabled=false;b.textContent='Send code';sst('tst','Connection failed','se');});
+}
+
+function verifyCode(){
+  var code=document.getElementById('authCode').value.trim();
+  var chatId=window._pendingChatId;
+  if(!code||!chatId){sst('tst','Enter the 6-digit code','se');return;}
+  var b=document.getElementById('vbtn');b.disabled=true;b.textContent='Verifying...';
+  api({action:'verify',cid:chatId,code:code}).then(function(r){
+    b.disabled=false;b.textContent='Verify code';
+    if(r&&r.ok&&r.token){
+      localStorage.setItem('uq_cid',chatId);CID=chatId;
+      localStorage.setItem('uq_sec',r.token);SEC=r.token;
+      refreshSb();
+      document.getElementById('scid').textContent=chatId;
+      document.getElementById('cbanner').classList.remove('hd');
+      document.getElementById('codeSection').classList.add('hd');
+      document.getElementById('authCode').value='';
+      sst('tst','Connected!','so');
+      cachedProducts=null;localStorage.removeItem('uq_products');
+      loadP(true);
+    }
+    else sst('tst',(r?r.error:'Invalid code'),'se');
+  }).catch(function(e){b.disabled=false;b.textContent='Verify code';sst('tst','Verification failed','se');});
 }
 
 function sst(id,msg,cls){var el=document.getElementById(id);el.textContent=msg;el.className='st '+cls;el.classList.remove('hd');}
