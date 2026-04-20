@@ -1,0 +1,21 @@
+{
+  "name": "dropping-scraper",
+  "version": "1.0.0",
+  "description": "Dropping price tracker scraper — runs on Raspberry Pi",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "check-uniqlo": "node src/jobs/check-uniqlo.js",
+    "check-arket": "node src/jobs/check-arket.js",
+    "check-cos": "node src/jobs/check-cos.js",
+    "check-mango": "node src/jobs/check-mango.js",
+    "check-sales": "node src/jobs/check-uniqlo-sales.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.10"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
