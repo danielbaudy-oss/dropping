@@ -1,8 +1,0 @@
-Field,Value
-phone,49123456789
-callmebot_apikey,123456
-telegram_chat_id,(optional)
-default_size_tops,M
-default_size_bottoms,32
-check_interval_min,30
-uniqlo_region,EU
