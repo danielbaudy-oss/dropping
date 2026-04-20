@@ -1516,9 +1516,11 @@ function addP(){
     tp:document.getElementById('tp').value||'',
     rg:parsedToUse.region,store:cStore,purl:cFullUrl
   };
-  if((cStore==='arket'||cStore==='cos'||cStore==='mango')&&cProd){
-    params.pname=cProd.name||'';params.pprice=cProd.currentPrice||0;
-    params.pcur=cProd.currency||'EUR';params.pimg=getSelColorImage()||cProd.mainImage||'';
+  if(cProd){
+    params.pname=cProd.name||'';
+    params.pprice=cProd.currentPrice||0;
+    params.pcur=cProd.currency||'EUR';
+    params.pimg=getSelColorImage()||cProd.mainImage||cProd.image||'';
   }
   api(params).then(function(r){
     b.disabled=false;b.textContent='Start watching';
