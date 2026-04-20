@@ -1,0 +1,17 @@
+# Dropping scraper schedule (Pi local time)
+# Install with: crontab crontab.txt
+
+# Uniqlo — 1x daily at 07:00
+0 7 * * * /home/baudy/pi-scraper/run-job.sh uniqlo >> /home/baudy/pi-scraper/logs/uniqlo.log 2>&1
+
+# ARKET — 3x daily
+15 7,13,20 * * * /home/baudy/pi-scraper/run-job.sh arket >> /home/baudy/pi-scraper/logs/arket.log 2>&1
+
+# COS — 3x daily
+30 7,13,20 * * * /home/baudy/pi-scraper/run-job.sh cos >> /home/baudy/pi-scraper/logs/cos.log 2>&1
+
+# Mango — 3x daily
+45 7,13,20 * * * /home/baudy/pi-scraper/run-job.sh mango >> /home/baudy/pi-scraper/logs/mango.log 2>&1
+
+# Uniqlo Sales — 1x daily at 08:00
+0 8 * * * /home/baudy/pi-scraper/run-job.sh sales >> /home/baudy/pi-scraper/logs/sales.log 2>&1

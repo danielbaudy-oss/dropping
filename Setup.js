@@ -2,6 +2,18 @@
    ONE-TIME SETUP (run once)
    ============================ */
 
+/* Disable all Apps Script triggers — run this after confirming Pi scraper works.
+   The Pi is now the sole source of price checks. */
+function disableAllTriggers() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var count = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    ScriptApp.deleteTrigger(triggers[i]);
+    count++;
+  }
+  Logger.log('Deleted ' + count + ' Apps Script triggers. Pi scraper is now solely responsible for price checks.');
+}
+
 function install() {
   getSheet('Config');
   getSheet('Users');
