@@ -48,29 +48,48 @@ async function run() {
     }
 
     const cacheKey = `sale_${group.region}_${group.gender}`;
-    const seenCodes = await db.getSaleCache(cacheKey);
-    console.log(`Previously seen: ${Object.keys(seenCodes).length} | Current: ${items.length}`);
+    const seenCache = await db.getSaleCache(cacheKey);
+    const seenCount = Object.keys(seenCache).length;
+    console.log(`Previously seen: ${seenCount} | Current: ${items.length}`);
 
+    /* Categorise items:
+       - newItems:   not in cache at all → "NEW ON SALE"
+       - deeperItems: in cache but current price < cached price → "BIGGER DISCOUNT"
+       - seen same or higher: ignore
+       Build the updated cache with current prices. */
     const newItems = [];
-    const allCodes = {};
+    const deeperItems = [];
+    const newCache = {};
     for (const it of items) {
-      allCodes[it.productCode] = true;
-      if (!seenCodes[it.productCode]) newItems.push(it);
+      newCache[it.productCode] = { price: it.salePrice, discount: it.discount };
+
+      const prev = seenCache[it.productCode];
+      // Handle legacy cache entries where value was just `true`
+      const prevPrice = (prev && typeof prev === 'object') ? prev.price : null;
+
+      if (!prev) {
+        newItems.push(it);
+      } else if (prevPrice !== null && it.salePrice < prevPrice) {
+        it._prevPrice = prevPrice;
+        it._prevDiscount = (prev && typeof prev === 'object') ? prev.discount : null;
+        deeperItems.push(it);
+      }
     }
 
-    console.log(`New items: ${newItems.length}`);
-    await db.setSaleCache(cacheKey, allCodes);
+    console.log(`New items: ${newItems.length} | Deeper discounts: ${deeperItems.length}`);
+    await db.setSaleCache(cacheKey, newCache);
 
-    // First run: silent cache build
-    if (Object.keys(seenCodes).length === 0 && newItems.length > 0) {
+    // First run: silent cache build (nothing in cache yet)
+    if (seenCount === 0 && items.length > 0) {
       console.log(`First run for ${key} — caching ${items.length} items silently`);
       continue;
     }
 
-    if (newItems.length === 0) continue;
+    if (newItems.length === 0 && deeperItems.length === 0) continue;
 
-    console.log(`Checking stock for ${newItems.length} new items...`);
-    await sales.enrichWithStock(newItems, group.region);
+    const itemsToEnrich = [...newItems, ...deeperItems];
+    console.log(`Checking stock for ${itemsToEnrich.length} items...`);
+    await sales.enrichWithStock(itemsToEnrich, group.region);
 
     for (const sub of group.subscribers) {
       const prefs = sub.salePrefs;
@@ -81,21 +100,29 @@ async function run() {
         minDiscount: 0
       };
 
-      const matching = newItems.filter((it) => sales.saleItemMatchesFilter(it, filter));
-      if (matching.length === 0) continue;
+      const matchingNew = newItems.filter((it) => sales.saleItemMatchesFilter(it, filter));
+      const matchingDeeper = deeperItems.filter((it) => sales.saleItemMatchesFilter(it, filter));
+      const totalMatching = matchingNew.length + matchingDeeper.length;
+      if (totalMatching === 0) continue;
 
-      console.log(`Sending digest + ${matching.length} alerts to ${sub.chat_id}`);
+      console.log(`Sending digest + ${totalMatching} alerts to ${sub.chat_id} (${matchingNew.length} new, ${matchingDeeper.length} deeper)`);
 
       const today = new Date();
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const dateStr = `${today.getDate()} ${months[today.getMonth()]}`;
       const gLabel = group.gender === 'women' ? "Women's" : "Men's";
-      const digest = `🏷 *Uniqlo ${gLabel} Sale Update — ${dateStr}*\n\n${matching.length} new item${matching.length > 1 ? 's' : ''} in your size`;
+      let digest = `🏷 *Uniqlo ${gLabel} Sale Update — ${dateStr}*\n\n`;
+      if (matchingNew.length > 0) digest += `${matchingNew.length} new item${matchingNew.length > 1 ? 's' : ''} in your size\n`;
+      if (matchingDeeper.length > 0) digest += `${matchingDeeper.length} bigger discount${matchingDeeper.length > 1 ? 's' : ''} on items already on sale`;
       await sendMessage(sub.chat_id, digest);
       await sleep(300);
 
-      for (const item of matching) {
-        await sendSaleAlert(sub.chat_id, item, filter);
+      for (const item of matchingNew) {
+        await sendSaleAlert(sub.chat_id, item, filter, 'new');
+        await sleep(300);
+      }
+      for (const item of matchingDeeper) {
+        await sendSaleAlert(sub.chat_id, item, filter, 'deeper');
         await sleep(300);
       }
     }
@@ -104,9 +131,17 @@ async function run() {
   console.log(`=== SALES CHECK DONE (${Math.round((Date.now() - startTime) / 1000)}s) ===`);
 }
 
-async function sendSaleAlert(chatId, item, filter) {
+async function sendSaleAlert(chatId, item, filter, kind) {
   const s = item.currencySymbol || '€';
-  let text = `🏷 *NEW ON SALE*\n\n*${item.name}*\nWas: ${s}${item.basePrice.toFixed(2)}\n*Now: ${s}${item.salePrice.toFixed(2)}* (-${item.discount}%)\n`;
+  const header = kind === 'deeper' ? '📉 *BIGGER DISCOUNT*' : '🏷 *NEW ON SALE*';
+  let text = `${header}\n\n*${item.name}*\n`;
+
+  if (kind === 'deeper' && item._prevPrice != null) {
+    text += `Was: ${s}${item.basePrice.toFixed(2)} → earlier: ${s}${item._prevPrice.toFixed(2)}\n`;
+    text += `*Now: ${s}${item.salePrice.toFixed(2)}* (-${item.discount}%)\n`;
+  } else {
+    text += `Was: ${s}${item.basePrice.toFixed(2)}\n*Now: ${s}${item.salePrice.toFixed(2)}* (-${item.discount}%)\n`;
+  }
 
   const hasColorBreakdown = item.colorStock && Object.keys(item.colorStock).length > 0 && filter;
   let firstOnSaleColor = '';
