@@ -1042,11 +1042,39 @@ function openEdit(id){
   var pc=editingProduct.product_code;
   var rg=editingProduct.region||'es';
   var cached=getCachedProductData(pc,rg);
-  if(cached){populateEditModal(cached);}
-  else if(store==='arket'){fetchEditDataArket(editingProduct.product_url);}
-  else if(store==='cos'){fetchEditDataCos(editingProduct.product_url);}
-  else if(store==='mango'){fetchEditDataMango(editingProduct.product_url);}
-  else{fetchEditData(pc,rg);}
+  if(cached){populateEditModal(cached);return;}
+
+  /* Instant: build a minimal product from what we already have in the DB row.
+     User can click "Refresh stock" to get fresh data from the store. */
+  var syntheticProduct=buildSyntheticProductFromRow(editingProduct);
+  populateEditModal(syntheticProduct);
+}
+
+/* Build a synthetic product object (shape expected by populateEditModal) from the DB row. */
+function buildSyntheticProductFromRow(row){
+  var price=parseFloat(row.last_price)||0;
+  var origPrice=parseFloat(row.initial_price)||price;
+  var curr=row.currency||'EUR';
+  var sym=CSYM[curr]||'€';
+  var store=detectStoreFromProduct(row);
+  var colorCode=row.color_code||'';
+  var sizeCode=String(row.size_code||'');
+  return{
+    productCode:row.product_code,
+    name:row.name||'Unknown',
+    image:row.image_url||'',
+    mainImage:row.image_url||'',
+    category:'tops',
+    currentPrice:price,
+    originalPrice:origPrice,
+    onSale:price<origPrice,
+    currency:curr,
+    currencySymbol:sym,
+    region:row.region||'es',
+    store:store,
+    colors:[{code:colorCode,name:row.color_name||colorCode,image:row.image_url||'',hex:'',available:true,sizes:[{sizeCode:sizeCode,sizeName:sizeCode,currentPrice:price,basePrice:origPrice,onSale:false,inStock:true,currency:curr,currencySymbol:sym}]}],
+    sizes:[{code:sizeCode,name:sizeCode}]
+  };
 }
 
 function fetchEditData(pc,rg){
