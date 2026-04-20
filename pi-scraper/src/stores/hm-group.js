@@ -194,8 +194,26 @@ async function fetchCosCurrentPrice(productUrl) {
   if (!productUrl.startsWith('http')) productUrl = `https://www.cos.com${productUrl}`;
   const parsed = parseCosUrl(productUrl);
   if (!parsed) return null;
-  const html = await fetchHtml(productUrl);
+
+  // Try direct fetch first (fast path — sometimes Akamai lets us through)
+  let html = await fetchHtml(productUrl);
+
+  // If direct fetch was blocked or returned nothing useful, fall back to headless browser
+  if (!html) {
+    try {
+      const { fetchWithBrowser } = require('../headless');
+      html = await fetchWithBrowser(productUrl, {
+        waitForSelector: 'script#__NEXT_DATA__',
+        extraDelay: 500
+      });
+    } catch (e) {
+      console.log('COS headless fetch failed:', e.message);
+      return null;
+    }
+  }
+
   if (!html) return null;
+
   const nextData = extractNextData(html);
   if (nextData) {
     const found = findProductInPageProps(nextData);

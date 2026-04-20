@@ -116,7 +116,17 @@ async function run() {
   console.log(`Done: ${ok} ok, ${fail} failed`);
 }
 
-run().then(() => process.exit(0)).catch((e) => {
+run().then(async () => {
+  try {
+    const { closeBrowser } = require('../headless');
+    await closeBrowser();
+  } catch (e) {}
+  process.exit(0);
+}).catch(async (e) => {
   console.error(e);
+  try {
+    const { closeBrowser } = require('../headless');
+    await closeBrowser();
+  } catch (e) {}
   process.exit(1);
 });
