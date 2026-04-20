@@ -1044,10 +1044,53 @@ function openEdit(id){
   var cached=getCachedProductData(pc,rg);
   if(cached){populateEditModal(cached);return;}
 
-  /* Instant: build a minimal product from what we already have in the DB row.
-     User can click "Refresh stock" to get fresh data from the store. */
+  /* Instant: show synthetic product so modal opens fast */
   var syntheticProduct=buildSyntheticProductFromRow(editingProduct);
   populateEditModal(syntheticProduct);
+
+  /* Background: fetch full product data to populate all colors/sizes for editing */
+  fetchFullProductInBackground(editingProduct,store);
+}
+
+function fetchFullProductInBackground(row,store){
+  var pc=row.product_code;
+  var rg=row.region||'es';
+  var fetchPromise=null;
+
+  if(store==='arket'){
+    var fullUrl=row.product_url||'';
+    if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.arket.com'+fullUrl;
+    if(fullUrl)fetchPromise=fetchArketClientSide(fullUrl);
+  }else if(store==='cos'){
+    var fullUrl=row.product_url||'';
+    if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://www.cos.com'+fullUrl;
+    if(fullUrl)fetchPromise=fetchCosClientSide(fullUrl);
+  }else if(store==='mango'){
+    var fullUrl=row.product_url||'';
+    if(fullUrl&&fullUrl.indexOf('http')!==0)fullUrl='https://shop.mango.com'+fullUrl;
+    if(fullUrl)fetchPromise=fetchMangoClientSide(fullUrl);
+  }else{
+    /* Uniqlo */
+    var url=row.product_url||('https://www.uniqlo.com/'+rg+'/en/products/'+pc+'/00');
+    fetchPromise=fetchUniqloClientSide(url);
+  }
+
+  if(!fetchPromise)return;
+
+  fetchPromise.then(function(product){
+    if(!product)return;
+    /* If user already closed the modal or switched to another product, abort */
+    if(!editingProduct||editingProduct.product_code!==pc)return;
+    /* Preserve the name from the DB row (it's often better than what the scraper returns) */
+    if(!product.name||product.name==='Unknown'||product._needsName){
+      product.name=row.name||product.name;
+    }
+    cacheProductData(pc,rg,product);
+    populateEditModal(product);
+  }).catch(function(err){
+    /* Silently fail — user still sees the synthetic product, Refresh button can retry */
+    console.log('Background product fetch failed:',err);
+  });
 }
 
 /* Build a synthetic product object (shape expected by populateEditModal) from the DB row. */
