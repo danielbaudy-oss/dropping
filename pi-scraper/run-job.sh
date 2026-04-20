@@ -20,5 +20,6 @@ case "$1" in
   cos)    /usr/bin/node src/jobs/check-cos.js ;;
   mango)  /usr/bin/node src/jobs/check-mango.js ;;
   sales)  /usr/bin/node src/jobs/check-uniqlo-sales.js ;;
-  *) echo "Usage: $0 <uniqlo|arket|cos|mango|sales>"; exit 1 ;;
+  cache)  /usr/bin/node src/jobs/refresh-product-cache.js ;;
+  *) echo "Usage: $0 <uniqlo|arket|cos|mango|sales|cache>"; exit 1 ;;
 esac
